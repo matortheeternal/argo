@@ -7,8 +7,8 @@ uses
 
 type
   TJSONValueType = (jtString, jtBoolean, jtInt, jtDouble, jtArray, jtObject);
-  JSONExceptionType = (jxEndOfStr, jxUnexpectedChar, jxStartBracket,
-    jxColonExpected, jxCommaExpected, jxUnexpectedNumeric, jxUnrecognizedValue);
+  JSONExceptionType = (jxTerminated, jxUnexpectedChar, jxStartBracket,
+    jxColonExpected, jxCommaExpected);
 
   JSONException = class(Exception)
   public
@@ -146,7 +146,6 @@ end;
 { === DESERIALIZATION === }
 
 var
-  ParseStart: Pointer;
   LastToken: Boolean;
 
 // function should be entered on the opening double quote for a JSON string.
@@ -166,7 +165,7 @@ begin
       '"': // quote
         if not escaped then break;
       #0:
-        raise JSONException.Create(jxEndOfStr, P);
+        raise JSONException.Create(jxTerminated, P);
       else begin
         if ord(c) < 32 then
           raise JSONException.Create(jxUnexpectedChar, P)
@@ -197,20 +196,19 @@ end;
 { JSONException }
 constructor JSONException.Create(exceptionType: JSONExceptionType; pos: PWideChar);
 const
-  JSONExceptionMessages: array[0..6] of string = (
-    'Unexpected end of JSON string at position %d.',
-    'Unexpected character in JSON string at position %d.',
-    'Expected left brace to start object at position %d.',
-    'Expected colon separating key value pair at position %d.',
-    'Expected comma separating object members at position %d.',
-    'Unexpected character in numeric value at position %d.',
-    'Unrecognized value at position %d.'
+  JSONExceptionMessages: array[0..4] of string = (
+    'Unexpected end of JSON near <%s>.',
+    'Unexpected character in JSON near <%s>.',
+    'Expected left brace to start object near <%s>.',
+    'Expected colon separating key value near <%s>.',
+    'Expected comma separating object/array members near <%s>.'
   );
 var
-  strPos: Integer;
+  context: PWideChar;
 begin
-  strPos := Integer(Addr(pos)) - Integer(ParseStart);
-  self.Message := Format(JSONExceptionMessages[Ord(exceptionType)], [strPos]);
+  GetMem(context, 34);
+  StrLCopy(context, pos - 8, 17);
+  self.Message := Format(JSONExceptionMessages[Ord(exceptionType)], [context]);
 end;
 
 { TJSONObject Deserialization }
@@ -221,7 +219,6 @@ begin
   Pairs := TStringList.Create;
   LastToken := False;
   P := PWideChar(json);
-  ParseStart := Addr(P);
   ParseObject(P);
 end;
 
@@ -230,7 +227,7 @@ var
   c: WideChar;
 begin
   if P^ <> '{' then
-    raise JSONException.Create(jxStartBracket, P);
+    raise JSONException.Create(jxStartBracket, P + 8);
   while true do begin
     Inc(P);
     c := P^;
@@ -244,7 +241,7 @@ begin
           Dec(P); // reposition for next iteration
         end;
       '}': break;
-      #0: raise JSONException.Create(jxEndOfStr, P);
+      #0: raise JSONException.Create(jxTerminated, P);
       else raise JSONException.Create(jxUnexpectedChar, P);
     end;
   end;
@@ -278,7 +275,7 @@ begin
     case c of
       #13, #10, ' ': continue; // whitespace characters
       ']': break;
-      #0: raise JSONException.Create(jxEndOfStr, P);
+      #0: raise JSONException.Create(jxTerminated, P);
       else begin
         if LastToken then
           raise JSONException.Create(jxCommaExpected, P)
@@ -324,7 +321,7 @@ begin
     Inc(P, 5);
   end
   else
-    raise JSONException.Create(jxUnrecognizedValue, P);
+    raise JSONException.Create(jxUnexpectedChar, P);
 end;
 
 procedure TJSONValue.ParseNumeric(var P: PWidechar);
@@ -346,7 +343,7 @@ begin
         if CharInSet(c, ['0'..'9','+','-','e','E']) then
           str := str + c
         else
-          raise JSONException.Create(jxUnexpectedNumeric, P);
+          raise JSONException.Create(jxUnexpectedChar, P);
       end;
     end;
     Inc(P);
