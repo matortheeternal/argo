@@ -40,6 +40,12 @@ type
     constructor Create(_valueType: TJSONValueType); overload;
     constructor Create(var P: PWideChar); overload;
     destructor Destroy; override;
+    procedure Put(value: String); overload;
+    procedure Put(value: Boolean); overload;
+    procedure Put(value: Int64); overload;
+    procedure Put(value: Double); overload;
+    procedure Put(value: TJSONArray); overload;
+    procedure Put(value: TJSONObject); overload;
     function ToString: string; override;
     property JSONValueType: TJSONValueType read GetJSONValueType;
   end;
@@ -49,7 +55,7 @@ type
     _Values: TList;
     function GetCount: Integer;
     function GetValue(index: Integer): TJSONValue;
-    function MakeValue(index: Integer; _valueType: TJSONValueType): TJSONValue;
+    function MakeValue(index: Integer): TJSONValue;
     function GetS(index: Integer): String;
     function GetB(index: Integer): Boolean;
     function GetI(index: Integer): Int64;
@@ -382,6 +388,42 @@ begin
   _v.o := TJSONObject.Create(P);
 end;
 
+procedure TJSONValue.Put(value: String);
+begin
+  _t := jtString;
+  _v.s := AllocString(value);
+end;
+
+procedure TJSONValue.Put(value: Boolean);
+begin
+  _t := jtBoolean;
+  _v.b := value;
+end;
+
+procedure TJSONValue.Put(value: Int64);
+begin
+  _t := jtInt;
+  _v.i := value;
+end;
+
+procedure TJSONValue.Put(value: Double);
+begin
+  _t := jtDouble;
+  _v.d := value;
+end;
+
+procedure TJSONValue.Put(value: TJSONArray);
+begin
+  _t := jtArray;
+  _v.a := value;
+end;
+
+procedure TJSONValue.Put(value: TJSONObject);
+begin
+  _t := jtObject;
+  _v.o := value;
+end;
+
 function TJSONValue.ToString: String;
 begin
   case _t of
@@ -442,13 +484,11 @@ begin
     Result := TJSONValue(_Values[index]);
 end;
 
-function TJSONArray.MakeValue(index: Integer; _valueType: TJSONValueType): TJSONValue;
+function TJSONArray.MakeValue(index: Integer): TJSONValue;
 begin
   Result := GetValue(index);
-  if Assigned(Result) then
-    Result._t := _valueType
-  else begin
-    Result := TJSONValue.Create(_valueType);
+  if not Assigned(Result) then begin
+    Result := TJSONValue.Create;
     _Values.Add(Result);
   end;
 end;
@@ -515,86 +555,68 @@ end;
 
 procedure TJSONArray.SetS(index: Integer; value: String);
 begin
-  MakeValue(index, jtString)._v.s := AllocString(value);
+  MakeValue(index).Put(value);
 end;
 
 procedure TJSONArray.SetB(index: Integer; value: Boolean);
 begin
-  MakeValue(index, jtBoolean)._v.b := value;
+  MakeValue(index).Put(value);
 end;
 
 procedure TJSONArray.SetI(index: Integer; value: Int64);
 begin
-  MakeValue(index, jtInt)._v.i := value;
+  MakeValue(index).Put(value);
 end;
 
 procedure TJSONArray.SetD(index: Integer; value: Double);
 begin
-  MakeValue(index, jtDouble)._v.d := value;
+  MakeValue(index).Put(value);
 end;
 
 procedure TJSONArray.SetA(index: Integer; value: TJSONArray);
 begin
-  MakeValue(index, jtArray)._v.a := value;
+  MakeValue(index).Put(value);
 end;
 
 procedure TJSONArray.SetO(index: Integer; value: TJSONObject);
 begin
-  MakeValue(index, jtObject)._v.o := value;
+  MakeValue(index).Put(value);
 end;
 
 function TJSONArray.Add(value: String): Integer;
-var
-  newValue: TJSONValue;
 begin
-  newValue := TJSONValue.Create(jtString);
-  newValue._v.s := AllocString(value);
-  Result := _Values.Add(newValue);
+  Result := _Values.Add(TJSONValue.Create);
+  TJSONValue(_Values[Result]).Put(value);
 end;
 
 function TJSONArray.Add(value: Boolean): Integer;
-var
-  newValue: TJSONValue;
 begin
-  newValue := TJSONValue.Create(jtBoolean);
-  newValue._v.b := value;
-  Result := _Values.Add(newValue);
+  Result := _Values.Add(TJSONValue.Create);
+  TJSONValue(_Values[Result]).Put(value);
 end;
 
 function TJSONArray.Add(value: Int64): Integer;
-var
-  newValue: TJSONValue;
 begin
-  newValue := TJSONValue.Create(jtInt);
-  newValue._v.i := value;
-  Result := _Values.Add(newValue);
+  Result := _Values.Add(TJSONValue.Create);
+  TJSONValue(_Values[Result]).Put(value);
 end;
 
 function TJSONArray.Add(value: Double): Integer;
-var
-  newValue: TJSONValue;
 begin
-  newValue := TJSONValue.Create(jtDouble);
-  newValue._v.d := value;
-  Result := _Values.Add(newValue);
+  Result := _Values.Add(TJSONValue.Create);
+  TJSONValue(_Values[Result]).Put(value);
 end;
 
 function TJSONArray.Add(value: TJSONArray): Integer;
-var
-  newValue: TJSONValue;
 begin
-  newValue := TJSONValue.Create(jtArray);
-  newValue._v.a := value;
-  Result := _Values.Add(newValue);
+  Result := _Values.Add(TJSONValue.Create);
+  TJSONValue(_Values[Result]).Put(value);
 end;
 
 function TJSONArray.Add(value: TJSONObject): Integer;
-var
-  newValue: TJSONValue;
 begin
-  newValue := TJSONValue.Create(jtObject);
-  newValue._v.o := value;
-  Result := _Values.Add(newValue);
+  Result := _Values.Add(TJSONValue.Create);
+  TJSONValue(_Values[Result]).Put(value);
 end;
 
 procedure TJSONArray.Delete(index: Integer);
