@@ -510,7 +510,6 @@ begin
             end);
         end);
 
-
       Describe('Deserialization', procedure
         begin
           BeforeAll(procedure
@@ -551,6 +550,108 @@ begin
           It('Should deserialize object values correctly', procedure
             begin
               Expect(obj.O['object'].GetHashCode > 0);
+            end);
+        end);
+    end);
+
+  Describe('Exceptions', procedure
+    begin
+      Describe('jxTerminated', procedure
+        begin
+          It('Should be raised when JSON object terminates unexpectedly', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"test":{');
+                end, 'Unexpected end of JSON near <"test":{>.');
+            end);
+
+          It('Should be raised when JSON string terminates unexpectedly', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"cheese":"abc 123 ');
+                end, 'Unexpected end of JSON near <abc 123 >.');
+            end);
+
+          It('Should be raised when JSON array terminates unexpectedly', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"open array": [40, "thousand",');
+                end, 'Unexpected end of JSON near <ousand",>.');
+            end);
+        end);
+
+      Describe('jxUnexpectedChar', procedure
+        begin
+          It('Should be raised when JSON object has unquoted key', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"test":{a:True}}');
+                end, 'Unexpected character in JSON near <"test":{a:True}}>.');
+            end);
+
+          It('Should be raised when using an invalid JSON value', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"test":{"a":nil}}');
+                end, 'Unexpected character in JSON near <t":{"a":nil}}>.');
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"test":{"b":truf}}');
+                end, 'Unexpected character in JSON near <t":{"b":truf}}>.');
+            end);
+
+          It('Should be raised when an unescaped control character is present', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"test":"'#7'"}');
+                end, 'Unexpected character in JSON near <"test":"'#7'"}>.');
+            end);
+        end);
+
+      Describe('jxStartBracket', procedure
+        begin
+          It('Should be raised when JSON string does not start with a left brace', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('this is not JSON');
+                end, 'Expected left brace to start object near <this is not JSON>.');
+            end);
+        end);
+
+      Describe('jxColonExpected', procedure
+        begin
+          It('Should be raised when JSON key value pair is not separated by a colon', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"boolean":True,"test" 1.234}');
+                end, 'Expected colon separating key value near <,"test" 1.234}>.');
+            end);
+        end);
+
+      Describe('jxCommaExpected', procedure
+        begin
+          It('Should be raised when JSON object members are not separated by a comma', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"boolean":True,"name":"bob" "test":1.234}');
+                end, 'Expected comma separating object/array members near <":"bob" "test":1.>.');
+            end);
+
+          It('Should be raised when JSON array members are not separated by a comma', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  TJSONObject.Create('{"boolean":True,"alphabet":["a","b","c" "d","e","f","g"]}');
+                end, 'Expected comma separating object/array members near <"b","c" "d","e",">.');
             end);
         end);
     end);
