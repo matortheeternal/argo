@@ -105,4 +105,5 @@ The name is a reference to Jason's ship from Greek Mythology, The Argo.
 ```pas
   obj := TJSONObject.Create('{"jason":["and","the","argonauts"],"seek":"the golden fleece"}');
   ary := TJSONArray.Create('[True,"2",3,4.0,{}]');
+  val := TJSONValue.Create('"all wrapped up"');
 ```
