@@ -81,23 +81,13 @@ type
     function Add(value: TJSONArray): Integer; overload;
   end;
 
-  TJSONPair = class(TObject)
-  private
-    key: string;
-    value: TJSONValue;
-  public
-    constructor Create(key: string; _valueType: TJSONValueType); overload;
-    constructor Create(var P: PWideChar); overload;
-    destructor Destroy; override;
-    function ToString: string; override;
-  end;
-
   TJSONObject = class(TObject)
   private
-    Pairs: TList;
-    procedure ParseObject(P: PWideChar);
-    function GetPair(key: string): TJSONPair;
-    function MakePair(key: string; _valueType: TJSONValueType): TJSONPair;
+    Pairs: TStringList;
+    procedure ParseObject(var P: PWideChar);
+    procedure ParsePair(var P: PWideChar);
+    function GetValue(key: string): TJSONValue;
+    function MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
     function GetS(key: string): String;
     function GetB(key: string): Boolean;
     function GetI(key: string): Int64;
@@ -221,14 +211,17 @@ end;
 
 { TJSONObject Deserialization }
 constructor TJSONObject.Create(json: string);
+var
+  P: PWideChar;
 begin
-  Pairs := TList.Create;
+  Pairs := TStringList.Create;
   ParseStart := @json;
   LastToken := False;
-  ParseObject(PWideChar(json));
+  P := PWideChar(json);
+  ParseObject(P);
 end;
 
-procedure TJSONObject.ParseObject(P: PWideChar);
+procedure TJSONObject.ParseObject(var P: PWideChar);
 var
   c: WideChar;
 begin
@@ -244,7 +237,7 @@ begin
         if LastToken then
           raise JSONException.Create(jxCommaExpected, P)
         else
-          Pairs.Add(TJSONPair.Create(P));
+          ParsePair(P);
       '}':
         break;
       #0:
@@ -255,6 +248,20 @@ begin
   end;
   // reset token separation tracking
   LastToken := False;
+end;
+
+procedure TJSONObject.ParsePair(var P: PWideChar);
+var
+  key: string;
+  value: TJSONValue;
+begin
+  key := ParseJSONString(P);
+  if not ParseSeparation(P, ':') then
+    raise JSONException.Create(jxColonExpected, P);
+  value := TJSONValue.Create(P);
+  Pairs.AddObject(key, value);
+  if not ParseSeparation(P, ',') then
+    LastToken := true;
 end;
 
 { TJSONArray Deserialization }
@@ -281,17 +288,6 @@ begin
   end;
   // reset token separation tracking
   LastToken := False;
-end;
-
-{ TJSONPair Deserialization }
-constructor TJSONPair.Create(var P: PWideChar);
-begin
-  key := ParseJSONString(P);
-  if not ParseSeparation(P, ':') then
-    raise JSONException.Create(jxColonExpected, P);
-  value := TJSONValue.Create(P);
-  if not ParseSeparation(P, ',') then
-    LastToken := true;
 end;
 
 { TJSONValue Deserialization }
@@ -598,28 +594,10 @@ begin
   Result := Result + ']';
 end;
 
-{ TJSONPair }
-constructor TJSONPair.Create(key: string; _valueType: TJSONValueType);
-begin
-  self.key := key;
-  value := TJSONValue.Create(_valueType);
-end;
-
-destructor TJSONPair.Destroy;
-begin
-  value.Free;
-  inherited;
-end;
-
-function TJSONPair.ToString: string;
-begin
-  Result := '"' + key + '":' + Value.ToString;
-end;
-
 { TJSONObject }
 constructor TJSONObject.Create;
 begin
-  Pairs := TList.Create;
+  Pairs := TStringList.Create;
 end;
 
 destructor TJSONObject.Destroy;
@@ -627,145 +605,134 @@ var
   i: Integer;
 begin
   for i := 0 to Pred(Pairs.Count) do
-    TJSONPair(Pairs[i]).Free;
+    TJSONValue(Pairs.Objects[i]).Free;
   Pairs.Free;
   inherited;
 end;
 
-function TJSONObject.GetPair(key: string): TJSONPair;
+function TJSONObject.GetValue(key: string): TJSONValue;
 var
   i: Integer;
 begin
   Result := nil;
-  for i := 0 to Pred(Pairs.Count) do
-    if TJSONPair(Pairs[i]).key = key then begin
-      Result := TJSONPair(Pairs[i]);
-      exit;
-    end;
+  i := Pairs.IndexOf(key);
+  if i > -1 then
+    Result := TJSONValue(Pairs.Objects[i]);
 end;
 
 function TJSONObject.GetS(key: string): string;
 var
-  pair: TJSONPair;
+  value: TJSONValue;
 begin
   Result := '';
-  pair := GetPair(key);
-  if Assigned(pair) and (pair.Value._t = jtString) then
-    Result := WideString(pair.Value._v.s);
+  value := GetValue(key);
+  if Assigned(value) and (value._t = jtString) then
+    Result := WideString(value._v.s);
 end;
 
 function TJSONObject.GetB(key: string): boolean;
 var
-  pair: TJSONPair;
+  value: TJSONValue;
 begin
   Result := false;
-  pair := GetPair(key);
-  if Assigned(pair) and (pair.Value._t = jtBoolean) then
-    Result := pair.Value._v.b;
+  value := GetValue(key);
+  if Assigned(value) and (value._t = jtBoolean) then
+    Result := value._v.b;
 end;
 
 function TJSONObject.GetI(key: string): Int64;
 var
-  pair: TJSONPair;
+  value: TJSONValue;
 begin
   Result := 0;
-  pair := GetPair(key);
-  if Assigned(pair) and (pair.value._t = jtInt) then
-    Result := pair.value._v.i;
+  value := GetValue(key);
+  if Assigned(value) and (value._t = jtInt) then
+    Result := value._v.i;
 end;
 
 function TJSONObject.GetD(key: string): Double;
 var
-  pair: TJSONPair;
+  value: TJSONValue;
 begin
   Result := 0.0;
-  pair := GetPair(key);
-  if Assigned(pair) and (pair.Value._t = jtDouble) then
-    Result := pair.Value._v.d;
+  value := GetValue(key);
+  if Assigned(value) and (value._t = jtDouble) then
+    Result := value._v.d;
 end;
 
 function TJSONObject.GetA(key: string): TJSONArray;
 var
-  pair: TJSONPair;
+  value: TJSONValue;
 begin
   Result := nil;
-  pair := GetPair(key);
-  if Assigned(pair) and (pair.Value._t = jtArray) then
-    Result := pair.Value._v.a;
+  value := GetValue(key);
+  if Assigned(value) and (value._t = jtArray) then
+    Result := value._v.a;
 end;
 
 function TJSONObject.GetO(key: string): TJSONObject;
 var
-  pair: TJSONPair;
+  value: TJSONValue;
 begin
   Result := nil;
-  pair := GetPair(key);
-  if Assigned(pair) and (pair.Value._t = jtObject) then
-    Result := pair.Value._v.o;
+  value := GetValue(key);
+  if Assigned(value) and (value._t = jtObject) then
+    Result := value._v.o;
 end;
 
-function TJSONObject.MakePair(key: string; _valueType: TJSONValueType): TJSONPair;
+function TJSONObject.MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
 begin
-  Result := GetPair(key);
+  Result := GetValue(key);
   if Assigned(Result) then
-    Result.Value._t := _valueType
+    Result._t := _valueType
   else begin
-    Result := TJSONPair.Create(key, _valueType);
-    Pairs.Add(Result);
+    Result := TJSONValue.Create(_valueType);
+    Pairs.AddObject(key, Result);
   end;
 end;
 
 procedure TJSONObject.SetS(key: string; value: string);
 begin
-  MakePair(key, jtString).Value._v.s := AllocString(value);
+  MakeValue(key, jtString)._v.s := AllocString(value);
 end;
 
 procedure TJSONObject.SetB(key: string; value: boolean);
 begin
-  MakePair(key, jtBoolean).Value._v.b := value;
+  MakeValue(key, jtBoolean)._v.b := value;
 end;
 
 procedure TJSONObject.SetI(key: string; value: Int64);
 begin
-  MakePair(key, jtInt).Value._v.i := value;
+  MakeValue(key, jtInt)._v.i := value;
 end;
 
 procedure TJSONObject.SetD(key: string; value: Double);
 begin
-  MakePair(key, jtDouble).Value._v.d := value;
+  MakeValue(key, jtDouble)._v.d := value;
 end;
 
 procedure TJSONObject.SetA(key: string; value: TJSONArray);
 begin
-  MakePair(key, jtArray).Value._v.a := value;
+  MakeValue(key, jtArray)._v.a := value;
 end;
 
 procedure TJSONObject.SetO(key: string; value: TJSONObject);
 begin
-  MakePair(key, jtObject).Value._v.o := value;
+  MakeValue(key, jtObject)._v.o := value;
 end;
 
 function TJSONObject.HasKey(key: string): Boolean;
-var
-  i: Integer;
 begin
-  Result := false;
-  for i := 0 to Pred(Pairs.Count) do
-    if TJSONPair(Pairs[i]).key = key then begin
-      Result := true;
-      exit;
-    end;
+  Result := Pairs.IndexOf(key) > -1;
 end;
 
 procedure TJSONObject.Delete(key: string);
 var
   i: Integer;
 begin
-  for i := Pred(Pairs.Count) downto 0 do
-    if TJSONPair(Pairs[i]).key = key then begin
-      Pairs.Delete(i);
-      exit;
-    end;
+  i := Pairs.IndexOf(key);
+  if i > -1 then
+    Pairs.Delete(i);
 end;
 
 function TJSONObject.ToString: String;
@@ -774,7 +741,7 @@ var
 begin
   Result := '{';
   for i := 0 to Pred(Pairs.Count) do
-    Result := Result + TJSONPair(Pairs[i]).ToString + ',';
+    Result := Result + '"' + Pairs[i] + '":' + TJSONValue(Pairs.Objects[i]).ToString + ',';
   if Pairs.Count > 0 then
     SetLength(Result, Length(Result) - 1);
   Result := Result + '}';
