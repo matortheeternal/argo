@@ -6,6 +6,11 @@ uses
   SysUtils, Classes, Variants;
 
 type
+  TFastStringList = class(TStringList)
+  protected
+    function CompareStrings(const S1, S2: string): Integer; override;
+  end;
+
   TJSONValueType = (jtString, jtBoolean, jtInt, jtDouble, jtArray, jtObject);
   JSONExceptionType = (jxTerminated, jxUnexpectedChar, jxStartBracket,
     jxColonExpected, jxCommaExpected);
@@ -93,7 +98,7 @@ type
 
   TJSONObject = class(TObject)
   private
-    Pairs: TStringList;
+    Pairs: TFastStringList;
     procedure ParsePair(var P: PWideChar);
     function GetKey(index: Integer): String;
     procedure SetKey(index: Integer; key: String);
@@ -151,10 +156,16 @@ function AllocString(str: string): PWideChar;
 var
   size: Integer;
 begin
+  Result := PWideChar('');
   size := StringSize(str);
   if size = 0 then exit;
   GetMem(Result, size);
   StrLCopy(Result, PWideChar(str), size);
+end;
+
+function TFastStringList.CompareStrings(const S1, S2: string): Integer;
+begin
+  Result := CompareStr(S1, S2);
 end;
 
 { === DESERIALIZATION === }
@@ -242,7 +253,7 @@ constructor TJSONObject.Create(var P: PWideChar);
 var
   c: WideChar;
 begin
-  Pairs := TStringList.Create;
+  Pairs := TFastStringList.Create;
   LastToken := False;
   if P^ <> '{' then
     raise JSONException.Create(jxStartBracket, P + 8);
@@ -648,7 +659,7 @@ end;
 { TJSONObject }
 constructor TJSONObject.Create;
 begin
-  Pairs := TStringList.Create;
+  Pairs := TFastStringList.Create;
 end;
 
 destructor TJSONObject.Destroy;
