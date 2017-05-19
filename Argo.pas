@@ -6,11 +6,6 @@ uses
   SysUtils, Classes, Variants;
 
 type
-  TFastStringList = class(TStringList)
-  protected
-    function CompareStrings(const S1, S2: string): Integer; override;
-  end;
-
   TJSONValueType = (jtString, jtBoolean, jtInt, jtDouble, jtArray, jtObject);
   JSONExceptionType = (jxTerminated, jxUnexpectedChar, jxStartBracket,
     jxColonExpected, jxCommaExpected);
@@ -161,11 +156,6 @@ begin
   if size = 0 then exit;
   GetMem(Result, size);
   StrLCopy(Result, PWideChar(str), size);
-end;
-
-function TFastStringList.CompareStrings(const S1, S2: string): Integer;
-begin
-  Result := CompareStr(S1, S2);
 end;
 
 { === DESERIALIZATION === }
