@@ -509,6 +509,50 @@ begin
                 end, 'List index out of bounds (6)');
             end);
         end);
+
+
+      Describe('Deserialization', procedure
+        begin
+          BeforeAll(procedure
+            begin
+              obj := TJSONObject.Create(json);
+            end);
+
+          It('Should deserialize the correct number of pairs', procedure
+            begin
+              ExpectEqual(obj.Count, 6);
+            end);
+
+          It('Should deserialize string values correctly', procedure
+            begin
+              ExpectEqual(obj.S['string'], 'abc');
+            end);
+
+          It('Should deserialize boolean values correctly', procedure
+            begin
+              ExpectEqual(obj.B['boolean'], False);
+            end);
+
+          It('Should deserialize integer values correctly', procedure
+            begin
+              ExpectEqual(obj.I['integer'], -987654321);
+            end);
+
+          It('Should deserialize double values correctly', procedure
+            begin
+              ExpectEqual(obj.D['double'], -3.14159);
+            end);
+
+          It('Should deserialize array values correctly', procedure
+            begin
+              Expect(obj.A['array'].GetHashCode > 0);
+            end);
+
+          It('Should deserialize object values correctly', procedure
+            begin
+              Expect(obj.O['object'].GetHashCode > 0);
+            end);
+        end);
     end);
 end;
 
