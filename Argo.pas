@@ -175,7 +175,7 @@ begin
     c := P^;
     case c of
       '\': // backslash
-        escaped := true;
+        escaped := not escaped;
       '"': // quote
         if not escaped then
           break
@@ -370,12 +370,12 @@ begin
     c := P^;
     case c of
       #10, #13, ' ', ',','}',']': break;
-      '.': begin
+      '.','e','E': begin
         _t := jtDouble;
         str := str + c;
       end;
       else begin
-        if CharInSet(c, ['0'..'9','+','-','e','E']) then
+        if CharInSet(c, ['0'..'9','+','-']) then
           str := str + c
         else
           raise JSONException.Create(jxUnexpectedChar, P);
@@ -386,7 +386,7 @@ begin
   if _t = jtDouble then
     _v.d := StrToFloat(str)
   else
-    _v.i := StrToInt(str);
+    _v.i := StrToInt64(str);
 end;
 
 procedure TJSONValue.ParseArray(var P: PWidechar);
