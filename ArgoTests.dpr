@@ -11,6 +11,7 @@ procedure BuildMahoganyTests;
 var
   obj: TJSONObject;
   ary: TJSONArray;
+  P: PWideChar;
   json: String;
   h: Integer;
   i: Integer;
@@ -219,6 +220,50 @@ begin
           It('Should serialize object values correctly', procedure
             begin
               Expect(Pos('{}', json) > 0, 'Should contain {}');
+            end);
+        end);
+
+      Describe('Deserialization', procedure
+        begin
+          BeforeAll(procedure
+            begin
+              P := PWideChar(json);
+              ary := TJSONArray.Create(P);
+            end);
+
+          It('Should deserialize the correct number of values', procedure
+            begin
+              ExpectEqual(ary.Count, 6);
+            end);
+
+          It('Should deserialize string values correctly', procedure
+            begin
+              ExpectEqual(ary.S[0], 'abc');
+            end);
+
+          It('Should deserialize boolean values correctly', procedure
+            begin
+              ExpectEqual(ary.B[1], False);
+            end);
+
+          It('Should deserialize integer values correctly', procedure
+            begin
+              ExpectEqual(ary.I[2], -1029384756);
+            end);
+
+          It('Should deserialize double values correctly', procedure
+            begin
+              ExpectEqual(ary.D[3], -2.71828182845);
+            end);
+
+          It('Should deserialize array values correctly', procedure
+            begin
+              Expect(ary.A[4].GetHashCode > 0);
+            end);
+
+          It('Should deserialize object values correctly', procedure
+            begin
+              Expect(ary.O[5].GetHashCode > 0);
             end);
         end);
     end);
