@@ -184,7 +184,7 @@ begin
   Result := False;
   // iterate over whitespace and separators
   while CharInSet(P^, [#10, #13, ' ', separator]) do begin
-    if P^ = ',' then begin
+    if P^ = WideChar(separator) then begin
       // duplicate separators raise an exception
       if Result then
         raise JSONException.Create(jxUnexpectedChar, P);
@@ -209,7 +209,7 @@ const
 var
   strPos: Integer;
 begin
-  strPos := ParseStart - pos;
+  strPos := Integer(Addr(pos)) - Integer(ParseStart);
   self.Message := Format(JSONExceptionMessages[Ord(exceptionType)], [strPos]);
 end;
 
@@ -219,9 +219,9 @@ var
   P: PWideChar;
 begin
   Pairs := TStringList.Create;
-  ParseStart := @json;
   LastToken := False;
   P := PWideChar(json);
+  ParseStart := Addr(P);
   ParseObject(P);
 end;
 
@@ -235,23 +235,22 @@ begin
     Inc(P);
     c := P^;
     case c of
-      #13, #10, ' ': // whitespace characters
-        continue;
+      #13, #10, ' ': continue; // whitespace characters
       '"':
         if LastToken then
           raise JSONException.Create(jxCommaExpected, P)
-        else
+        else begin
           ParsePair(P);
-      '}':
-        break;
-      #0:
-        raise JSONException.Create(jxEndOfStr, P);
-      else
-        raise JSONException.Create(jxUnexpectedChar, P);
+          Dec(P); // reposition for next iteration
+        end;
+      '}': break;
+      #0: raise JSONException.Create(jxEndOfStr, P);
+      else raise JSONException.Create(jxUnexpectedChar, P);
     end;
   end;
   // reset token separation tracking
   LastToken := False;
+  Inc(P);
 end;
 
 procedure TJSONObject.ParsePair(var P: PWideChar);
@@ -264,8 +263,7 @@ begin
     raise JSONException.Create(jxColonExpected, P);
   value := TJSONValue.Create(P);
   Pairs.AddObject(key, value);
-  if not ParseSeparation(P, ',') then
-    LastToken := true;
+  LastToken := not ParseSeparation(P, ',');
 end;
 
 { TJSONArray Deserialization }
@@ -273,33 +271,35 @@ constructor TJSONArray.Create(var P: PWideChar);
 var
   c: WideChar;
 begin
+  Values := TList.Create;
   while true do begin
     Inc(P);
     c := P^;
     case c of
-      #13, #10, ' ': // whitespace characters
-        continue;
-      ']':
-        break;
-      #0:
-        raise JSONException.Create(jxEndOfStr, P);
+      #13, #10, ' ': continue; // whitespace characters
+      ']': break;
+      #0: raise JSONException.Create(jxEndOfStr, P);
       else begin
-        Values.Add(TJSONValue.Create(P));
-        if not ParseSeparation(P, ',') then
-          LastToken := true;
+        if LastToken then
+          raise JSONException.Create(jxCommaExpected, P)
+        else
+          Values.Add(TJSONValue.Create(P));
+        LastToken := not ParseSeparation(P, ',');
+        Dec(P); // reposition for next iteration
       end;
     end;
   end;
   // reset token separation tracking
   LastToken := False;
+  Inc(P);
 end;
 
 { TJSONValue Deserialization }
 constructor TJSONValue.Create(var P: PWideChar);
 begin
   case P^ of
-    '[': ParseObject(P);
-    '{': ParseArray(P);
+    '{': ParseObject(P);
+    '[': ParseArray(P);
     '"': ParseString(P);
     'f','t','F','T': ParseBoolean(P);
     else ParseNumeric(P);
@@ -309,7 +309,7 @@ end;
 procedure TJSONValue.ParseString(var P: PWidechar);
 begin
   _t := jtString;
-  _v.s := PWideChar(ParseJSONString(P));
+  _v.s := AllocString(ParseJSONString(P));
 end;
 
 procedure TJSONValue.ParseBoolean(var P: PWidechar);
