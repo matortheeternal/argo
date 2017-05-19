@@ -53,6 +53,7 @@ type
   end;
 
   // PUBLIC API
+  procedure TestComment(comment: String);
   procedure Describe(description: String; callback: TProc);
   procedure BeforeAll(callback: TProc);
   procedure AfterAll(callback: TProc);
@@ -84,6 +85,15 @@ implementation
   These functions provide the public API for Vermilion.
 }
 {******************************************************************************}
+
+{ Utility Functions }
+procedure TestComment(comment: String);
+var
+  spacing: string;
+begin
+  spacing := StringOfChar(' ', (ActiveSuite.depth + 2) * 2);
+  LogMessage(spacing + comment);
+end;
 
 { Suite Functions }
 procedure Describe(description: String; callback: TProc);
@@ -296,6 +306,7 @@ var
 begin
   try
     inherited;
+    ActiveSuite := self;
     // Setup before all tests if given
     if Assigned(BeforeAll) then BeforeAll;
 
