@@ -50,7 +50,7 @@
 			<DelphiCompile Include="ArgoTests.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="lib\Mahogany\maMain.pas"/>
+			<DCCReference Include="lib\Mahogany\Mahogany.pas"/>
 			<DCCReference Include="Argo.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>

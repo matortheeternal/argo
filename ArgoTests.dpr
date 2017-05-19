@@ -4,7 +4,7 @@ program ArgoTests;
 
 uses
   SysUtils,
-  maMain in 'lib\Mahogany\maMain.pas',
+  Mahogany in 'lib\Mahogany\Mahogany.pas',
   Argo in 'Argo.pas';
 
 procedure BuildMahoganyTests;

@@ -1,4 +1,4 @@
-unit maMain;
+unit Mahogany;
 
 interface
 
