@@ -25,8 +25,8 @@ The name is a reference to Jason's ship from Greek Mythology, The Argo.
   obj.B['boolean'] := True;
   obj.I['integer'] := 123;
   obj.D['double'] := 3.14159;
-  obj.O['object'] := TJSONObject.Create;
-  obj.O['object'].S['objects'] := 'are easy';
+  obj.O['objects'] := TJSONObject.Create;
+  obj.O['objects'].S['are'] := 'easy';
   obj.A['arrays'] := TJSONArray.Create;
   obj.A['arrays'].Add('are too!');
 ```
