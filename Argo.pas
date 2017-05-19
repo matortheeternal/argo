@@ -152,6 +152,7 @@ var
   size: Integer;
 begin
   size := StringSize(str);
+  if size = 0 then exit;
   GetMem(Result, size);
   StrLCopy(Result, PWideChar(str), size);
 end;
@@ -176,10 +177,14 @@ begin
       '\': // backslash
         escaped := true;
       '"': // quote
-        if not escaped then break;
+        if not escaped then
+          break
+        else
+          escaped := false;
       #0:
         raise JSONException.Create(jxTerminated, P);
       else begin
+        if escaped then escaped := false;
         if ord(c) < 32 then
           raise JSONException.Create(jxUnexpectedChar, P)
         else
@@ -364,7 +369,7 @@ begin
   while true do begin
     c := P^;
     case c of
-      #10, #13, ' ', ',': break;
+      #10, #13, ' ', ',','}',']': break;
       '.': begin
         _t := jtDouble;
         str := str + c;
