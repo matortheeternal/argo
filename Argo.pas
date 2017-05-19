@@ -7,10 +7,19 @@ uses
 
 type
   TJSONValueType = (jtString, jtBoolean, jtInt, jtDouble, jtArray, jtObject);
+  JSONExceptionType = (jxEndOfStr, jxUnexpectedChar, jxStartBracket,
+    jxColonExpected, jxCommaExpected, jxUnexpectedNumeric, jxUnrecognizedValue);
+
+  JSONException = class(Exception)
+  public
+    constructor Create(exceptionType: JSONExceptionType; pos: PWideChar);
+  end;
+
   TJSONObject = class;
   TJSONArray = class;
 
   TJSONValue = class(TObject)
+  private
     _t: TJSONValueType;
     _v: record
       case _valueType: TJSONValueType of
@@ -21,15 +30,22 @@ type
         jtObject:  (o: TJSONObject);
         jtArray:   (a: TJSONArray);
     end;
-    function ToString: string; override;
+    procedure ParseObject(var P: PWideChar);
+    procedure ParseArray(var P: PWideChar);
+    procedure ParseString(var P: PWideChar);
+    procedure ParseBoolean(var P: PWideChar);
+    procedure ParseNumeric(var P: PWideChar);
+  public
     constructor Create(_valueType: TJSONValueType); overload;
+    constructor Create(var P: PWideChar); overload;
     destructor Destroy; override;
+    function ToString: string; override;
   end;
 
   TJSONArray = class(TObject)
   private
     Values: TList;
-    function GetLength: Integer;
+    function GetCount: Integer;
     function GetValue(index: Integer): TJSONValue;
     function MakeValue(index: Integer; _valueType: TJSONValueType): TJSONValue;
     function GetS(index: Integer): String;
@@ -45,7 +61,12 @@ type
     procedure SetA(index: Integer; value: TJSONArray);
     procedure SetO(index: Integer; value: TJSONObject);
   public
-    property Length: Integer read GetLength;
+    constructor Create; overload;
+    constructor Create(var P: PWideChar); overload;
+    destructor Destroy; override;
+    procedure Delete(index: Integer);
+    function ToString: string; override;
+    property Count: Integer read GetCount;
     property S[index: Integer]: String read GetS write SetS;
     property B[index: Integer]: Boolean read GetB write SetB;
     property I[index: Integer]: Int64 read GetI write SetI;
@@ -58,10 +79,6 @@ type
     function Add(value: Double): Integer; overload;
     function Add(value: TJSONObject): Integer; overload;
     function Add(value: TJSONArray): Integer; overload;
-    procedure Delete(index: Integer);
-    function ToString: string; override;
-    constructor Create;
-    destructor Destroy; override;
   end;
 
   TJSONPair = class(TObject)
@@ -69,14 +86,16 @@ type
     key: string;
     value: TJSONValue;
   public
-    function ToString: string; override;
     constructor Create(key: string; _valueType: TJSONValueType); overload;
+    constructor Create(var P: PWideChar); overload;
     destructor Destroy; override;
+    function ToString: string; override;
   end;
 
   TJSONObject = class(TObject)
   private
     Pairs: TList;
+    procedure ParseObject(P: PWideChar);
     function GetPair(key: string): TJSONPair;
     function MakePair(key: string; _valueType: TJSONValueType): TJSONPair;
     function GetS(key: string): String;
@@ -92,22 +111,27 @@ type
     procedure SetI(key: string; value: Int64);
     procedure SetD(key: string; value: Double);
   public
+    constructor Create; overload;
+    constructor Create(json: string); overload;
+    destructor Destroy; override;
+    function HasKey(key: string): Boolean;
+    procedure Delete(key: string);
+    function ToString: string; override;
     property S[index: string]: String read GetS write SetS;
     property B[index: string]: Boolean read GetB write SetB;
     property I[index: string]: Int64 read GetI write SetI;
     property D[index: string]: Double read GetD write SetD;
     property O[index: string]: TJSONObject read GetO write SetO;
     property A[index: string]: TJSONArray read GetA write SetA;
-    function HasKey(key: string): Boolean;
-    procedure Delete(key: string);
-    function ToString: string; override;
-    constructor Create;
-    destructor Destroy; override;
   end;
+
+  // HELPER FUNCTIONS
+  // TODO
+
 
 implementation
 
-{ HELPERS }
+{ === HELPERS === }
 
 function StringSize(str: string): Integer;
 begin
@@ -125,17 +149,225 @@ begin
   StrLCopy(Result, PWideChar(str), size);
 end;
 
-{ TJSONValue }
-constructor TJSONValue.Create(_valueType: TJSONValueType);
+{ === DESERIALIZATION === }
+
+var
+  ParseStart: Pointer;
+  LastToken: Boolean;
+
+// function should be entered on the opening double quote for a JSON string.
+function ParseJSONString(var P: PWideChar): String;
+var
+  escaped: Boolean;
+  c: WideChar;
 begin
-  _t := _valueType;
+  Result := '';
+  escaped := false;
+  while true do begin
+    Inc(P);
+    c := P^;
+    case c of
+      '\': // backslash
+        escaped := true;
+      '"': // quote
+        if not escaped then break;
+      #0:
+        raise JSONException.Create(jxEndOfStr, P);
+      else begin
+        if ord(c) < 32 then
+          raise JSONException.Create(jxUnexpectedChar, P)
+        else
+          Result := Result + c;
+      end;
+    end;
+  end;
+  Inc(P); // move past trailing quote
 end;
 
-destructor TJSONValue.Destroy;
+// function should be entered between object or array members
+function ParseSeparation(var P: PWideChar; separator: AnsiChar): Boolean;
 begin
-  if _t = jtArray then _v.a.Free;
-  if _t = jtObject then _v.o.Free;
-  inherited;
+  Result := False;
+  // iterate over whitespace and separators
+  while CharInSet(P^, [#10, #13, ' ', separator]) do begin
+    if P^ = ',' then begin
+      // duplicate separators raise an exception
+      if Result then
+        raise JSONException.Create(jxUnexpectedChar, P);
+      Result := True;
+    end;
+    Inc(P);
+  end;
+end;
+
+{ JSONException }
+constructor JSONException.Create(exceptionType: JSONExceptionType; pos: PWideChar);
+const
+  JSONExceptionMessages: array[0..6] of string = (
+    'Unexpected end of JSON string at position %d.',
+    'Unexpected character in JSON string at position %d.',
+    'Expected left brace to start object at position %d.',
+    'Expected colon separating key value pair at position %d.',
+    'Expected comma separating object members at position %d.',
+    'Unexpected character in numeric value at position %d.',
+    'Unrecognized value at position %d.'
+  );
+var
+  strPos: Integer;
+begin
+  strPos := ParseStart - pos;
+  self.Message := Format(JSONExceptionMessages[Ord(exceptionType)], [strPos]);
+end;
+
+{ TJSONObject Deserialization }
+constructor TJSONObject.Create(json: string);
+begin
+  Pairs := TList.Create;
+  ParseStart := @json;
+  LastToken := False;
+  ParseObject(PWideChar(json));
+end;
+
+procedure TJSONObject.ParseObject(P: PWideChar);
+var
+  c: WideChar;
+begin
+  if P^ <> '{' then
+    raise JSONException.Create(jxStartBracket, P);
+  while true do begin
+    Inc(P);
+    c := P^;
+    case c of
+      #13, #10, ' ': // whitespace characters
+        continue;
+      '"':
+        if LastToken then
+          raise JSONException.Create(jxCommaExpected, P)
+        else
+          Pairs.Add(TJSONPair.Create(P));
+      '}':
+        break;
+      #0:
+        raise JSONException.Create(jxEndOfStr, P);
+      else
+        raise JSONException.Create(jxUnexpectedChar, P);
+    end;
+  end;
+  // reset token separation tracking
+  LastToken := False;
+end;
+
+{ TJSONArray Deserialization }
+constructor TJSONArray.Create(var P: PWideChar);
+var
+  c: WideChar;
+begin
+  while true do begin
+    Inc(P);
+    c := P^;
+    case c of
+      #13, #10, ' ': // whitespace characters
+        continue;
+      ']':
+        break;
+      #0:
+        raise JSONException.Create(jxEndOfStr, P);
+      else begin
+        Values.Add(TJSONValue.Create(P));
+        if not ParseSeparation(P, ',') then
+          LastToken := true;
+      end;
+    end;
+  end;
+  // reset token separation tracking
+  LastToken := False;
+end;
+
+{ TJSONPair Deserialization }
+constructor TJSONPair.Create(var P: PWideChar);
+begin
+  key := ParseJSONString(P);
+  if not ParseSeparation(P, ':') then
+    raise JSONException.Create(jxColonExpected, P);
+  value := TJSONValue.Create(P);
+  if not ParseSeparation(P, ',') then
+    LastToken := true;
+end;
+
+{ TJSONValue Deserialization }
+constructor TJSONValue.Create(var P: PWideChar);
+begin
+  case P^ of
+    '[': ParseObject(P);
+    '{': ParseArray(P);
+    '"': ParseString(P);
+    'f','t','F','T': ParseBoolean(P);
+    else ParseNumeric(P);
+  end;
+end;
+
+procedure TJSONValue.ParseString(var P: PWidechar);
+begin
+  _t := jtString;
+  _v.s := PWideChar(ParseJSONString(P));
+end;
+
+procedure TJSONValue.ParseBoolean(var P: PWidechar);
+begin
+  _t := jtBoolean;
+  if StrLIComp(P, 'true', 4) = 0 then begin
+    _v.b := true;
+    Inc(P, 4);
+  end
+  else if StrLIComp(P, 'false', 5) = 0 then begin
+    _v.b := false;
+    Inc(P, 5);
+  end
+  else
+    raise JSONException.Create(jxUnrecognizedValue, P);
+end;
+
+procedure TJSONValue.ParseNumeric(var P: PWidechar);
+var
+  str: String;
+  c: WideChar;
+begin
+  _t := jtInt;
+  str := '';
+  while true do begin
+    c := P^;
+    case c of
+      #10, #13, ' ', ',': break;
+      '.': begin
+        _t := jtDouble;
+        str := str + c;
+      end;
+      else begin
+        if CharInSet(c, ['0'..'9','+','-','e','E']) then
+          str := str + c
+        else
+          raise JSONException.Create(jxUnexpectedNumeric, P);
+      end;
+    end;
+    Inc(P);
+  end;
+  if _t = jtDouble then
+    _v.d := StrToFloat(str)
+  else
+    _v.i := StrToInt(str);
+end;
+
+procedure TJSONValue.ParseArray(var P: PWidechar);
+begin
+  _t := jtArray;
+  _v.a := TJSONArray.Create(P);
+end;
+
+procedure TJSONValue.ParseObject(var P: PWidechar);
+begin
+  _t := jtObject;
+  _v.o := TJSONObject.Create;
+  _v.o.ParseObject(P);
 end;
 
 function TJSONValue.ToString: String;
@@ -148,6 +380,21 @@ begin
     jtArray: Result := _v.a.ToString;
     jtObject: Result := _v.o.ToString;
   end;
+end;
+
+{ === GENERAL === }
+
+{ TJSONValue }
+constructor TJSONValue.Create(_valueType: TJSONValueType);
+begin
+  _t := _valueType;
+end;
+
+destructor TJSONValue.Destroy;
+begin
+  if _t = jtArray then _v.a.Free;
+  if _t = jtObject then _v.o.Free;
+  inherited;
 end;
 
 { TJSONArray }
@@ -166,7 +413,7 @@ begin
   inherited;
 end;
 
-function TJSONArray.GetLength: Integer;
+function TJSONArray.GetCount: Integer;
 begin
    Result := Values.Count;
 end;
@@ -339,14 +586,15 @@ begin
     Values.Delete(index);
 end;
 
-function TJSONArray.ToString: String;
+function TJSONArray.ToString: string;
 var
   i: Integer;
 begin
   Result := '[';
   for i := 0 to Pred(Values.Count) do
     Result := Result + TJSONValue(Values[i]).ToString + ',';
-  //Result[Length(Result)] := ']';
+  if Values.Count > 0 then
+    SetLength(Result, Length(Result) - 1);
   Result := Result + ']';
 end;
 
@@ -527,7 +775,9 @@ begin
   Result := '{';
   for i := 0 to Pred(Pairs.Count) do
     Result := Result + TJSONPair(Pairs[i]).ToString + ',';
-  Result[Length(Result)] := '}';
+  if Pairs.Count > 0 then
+    SetLength(Result, Length(Result) - 1);
+  Result := Result + '}';
 end;
 
 end.
