@@ -35,13 +35,13 @@ begin
 
           It('Should be able to retrieve string values', procedure
             begin
-              ExpectEqual(ary.S[0], 'Testing', '');
+              ExpectEqual(ary.S[0], 'Testing');
             end);
 
           It('Should be able to replace string values', procedure
             begin
               ary.S[0] := 'abc';
-              ExpectEqual(ary.S[0], 'abc', '');
+              ExpectEqual(ary.S[0], 'abc');
             end);
         end);
 
@@ -49,7 +49,7 @@ begin
         begin
           It('Out of bounds indices should return 0', procedure
             begin
-              ExpectEqual(ary.I[1], 0, '');
+              ExpectEqual(ary.I[1], 0);
             end);
 
           It('Should be able to add integer values', procedure
@@ -59,13 +59,13 @@ begin
 
           It('Should be able to retrieve integer values', procedure
             begin
-              ExpectEqual(ary.I[1], 5647382910, '');
+              ExpectEqual(ary.I[1], 5647382910);
             end);
 
           It('Should be able to replace integer values', procedure
             begin
               ary.I[1] := -1029384756;
-              ExpectEqual(ary.I[1], -1029384756, '');
+              ExpectEqual(ary.I[1], -1029384756);
             end);
         end);
 
@@ -73,7 +73,7 @@ begin
         begin
           It('Out of bounds indices should return 0.0', procedure
             begin
-              ExpectEqual(ary.D[2], 0.0, '');
+              ExpectEqual(ary.D[2], 0.0);
             end);
 
           It('Should be able to add double values', procedure
@@ -83,13 +83,13 @@ begin
 
           It('Should be able to retrieve double values', procedure
             begin
-              ExpectEqual(ary.D[2], 1.414213562, '');
+              ExpectEqual(ary.D[2], 1.414213562);
             end);
 
           It('Should be able to replace double values', procedure
             begin
               ary.D[2] := -2.71828182845;
-              ExpectEqual(ary.D[2], -2.71828182845, '');
+              ExpectEqual(ary.D[2], -2.71828182845);
             end);
         end);
 
@@ -97,7 +97,7 @@ begin
         begin
           It('Out of bounds indices should return nil', procedure
             begin
-              Expect(not Assigned(ary.A[3]), '');
+              Expect(not Assigned(ary.A[3]));
             end);
 
           It('Should be able to add array values', procedure
@@ -108,13 +108,13 @@ begin
           It('Should be able to retrieve array values', procedure
             begin
               h := ary.A[3].GetHashCode;
-              Expect(h > 0, '');
+              Expect(h > 0);
             end);
 
           It('Should be able to replace array values', procedure
             begin
               ary.A[3] := TJSONArray.Create;
-              Expect(ary.A[3].GetHashCode <> h, '');
+              Expect(ary.A[3].GetHashCode <> h);
             end);
         end);
 
@@ -122,7 +122,7 @@ begin
         begin
           It('Out of bounds indices should return nil', procedure
             begin
-              Expect(not Assigned(ary.O[4]), '');
+              Expect(not Assigned(ary.O[4]));
             end);
 
           It('Should be able to add object values', procedure
@@ -133,13 +133,13 @@ begin
           It('Should be able to retrieve object values', procedure
             begin
               h := ary.O[4].GetHashCode;
-              Expect(h > 0, '');
+              Expect(h > 0);
             end);
 
           It('Should be able to replace object values', procedure
             begin
               ary.O[4] := TJSONObject.Create;
-              Expect(ary.O[4].GetHashCode <> h, '');
+              Expect(ary.O[4].GetHashCode <> h);
             end);
         end);
     end);
@@ -155,7 +155,7 @@ begin
         begin
           It('Unassigned keys should return an empty string', procedure
             begin
-              ExpectEqual(obj.S['string'], '', '');
+              ExpectEqual(obj.S['string'], '');
             end);
 
           It('Should be able to set string values', procedure
@@ -165,13 +165,13 @@ begin
 
           It('Should be able to retrieve string values', procedure
             begin
-              ExpectEqual(obj.S['string'], 'Testing', '');
+              ExpectEqual(obj.S['string'], 'Testing');
             end);
 
           It('Should be able to replace string values', procedure
             begin
               obj.S['string'] := 'abc';
-              ExpectEqual(obj.S['string'], 'abc', '');
+              ExpectEqual(obj.S['string'], 'abc');
             end);
         end);
 
@@ -179,7 +179,7 @@ begin
         begin
           It('Unassigned keys should return false', procedure
             begin
-              ExpectEqual(obj.B['string'], false, '');
+              ExpectEqual(obj.B['string'], false);
             end);
 
           It('Should be able to set boolean values', procedure
@@ -189,13 +189,13 @@ begin
 
           It('Should be able to retrieve boolean values', procedure
             begin
-              ExpectEqual(obj.B['boolean'], true, '');
+              ExpectEqual(obj.B['boolean'], true);
             end);
 
           It('Should be able to replace boolean values', procedure
             begin
               obj.B['boolean'] := false;
-              ExpectEqual(obj.B['boolean'], false, '');
+              ExpectEqual(obj.B['boolean'], false);
             end);
         end);
 
@@ -203,7 +203,7 @@ begin
         begin
           It('Unassigned keys should return 0', procedure
             begin
-              ExpectEqual(obj.I['integer'], 0, '');
+              ExpectEqual(obj.I['integer'], 0);
             end);
 
           It('Should be able to set integer values', procedure
@@ -213,13 +213,13 @@ begin
 
           It('Should be able to retrieve integer values', procedure
             begin
-              ExpectEqual(obj.I['integer'], 1234567890, '');
+              ExpectEqual(obj.I['integer'], 1234567890);
             end);
 
           It('Should be able to replace integer values', procedure
             begin
               obj.I['integer'] := -987654321;
-              ExpectEqual(obj.I['integer'], -987654321, '');
+              ExpectEqual(obj.I['integer'], -987654321);
             end);
         end);
 
@@ -227,7 +227,7 @@ begin
         begin
           It('Unassigned keys should return 0.0', procedure
             begin
-              ExpectEqual(obj.D['double'], 0.0, '');
+              ExpectEqual(obj.D['double'], 0.0);
             end);
 
           It('Should be able to set double values', procedure
@@ -237,13 +237,13 @@ begin
 
           It('Should be able to retrieve double values', procedure
             begin
-              ExpectEqual(obj.D['double'], 1.618033, '');
+              ExpectEqual(obj.D['double'], 1.618033);
             end);
 
           It('Should be able to replace double values', procedure
             begin
               obj.D['double'] := -3.14159;
-              ExpectEqual(obj.D['double'], -3.14159, '');
+              ExpectEqual(obj.D['double'], -3.14159);
             end);
         end);
 
@@ -251,7 +251,7 @@ begin
         begin
           It('Unassigned keys should return nil', procedure
             begin
-              Expect(not Assigned(obj.A['array']), '');
+              Expect(not Assigned(obj.A['array']));
             end);
 
           It('Should be able to set array values', procedure
@@ -262,7 +262,7 @@ begin
           It('Should be able to retrieve array values', procedure
             begin
               h := obj.A['array'].GetHashCode;
-              Expect(h > 0, '');
+              Expect(h > 0);
             end);
 
           It('Should be able to replace array values', procedure
@@ -276,7 +276,7 @@ begin
         begin
           It('Unassigned keys should return nil', procedure
             begin
-              Expect(not Assigned(obj.O['object']), '');
+              Expect(not Assigned(obj.O['object']));
             end);
 
           It('Should be able to set object values', procedure
@@ -287,7 +287,7 @@ begin
           It('Should be able to retrieve object values', procedure
             begin
               h := obj.O['object'].GetHashCode;
-              Expect(h > 0, '');
+              Expect(h > 0);
             end);
 
           It('Should be able to replace object values', procedure
@@ -306,8 +306,8 @@ begin
 
           It('Should serialize object bounds', procedure
             begin
-              ExpectEqual(json[1], '{', '');
-              ExpectEqual(json[Length(json)], '}', '');
+              ExpectEqual(json[1], '{');
+              ExpectEqual(json[Length(json)], '}');
             end);
 
           It('Should serialize keys', procedure
