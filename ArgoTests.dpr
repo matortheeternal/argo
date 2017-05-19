@@ -438,6 +438,32 @@ begin
               Expect(Pos('"array":', json) < Pos('"object":', json), 'Should serialize array before object');
             end);
         end);
+
+      Describe('Pairs', procedure
+        begin
+          It('Should allow you access pairs count', procedure
+            begin
+              ExpectEqual(obj.Count, 6);
+            end);
+
+          It('Should allow you to access pair keys by index', procedure
+            begin
+              ExpectEqual(obj.Keys[0], 'string');
+              ExpectEqual(obj.Keys[1], 'boolean');
+              ExpectEqual(obj.Keys[2], 'integer');
+              ExpectEqual(obj.Keys[3], 'double');
+              ExpectEqual(obj.Keys[4], 'array');
+              ExpectEqual(obj.Keys[5], 'object');
+            end);
+
+          It('Should raise an exception if key index is out of bounds', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  obj.Keys[6]
+                end, 'List index out of bounds (6)');
+            end);
+        end);
     end);
 end;
 

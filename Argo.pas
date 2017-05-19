@@ -109,7 +109,7 @@ type
     function HasKey(key: string): Boolean;
     procedure Delete(key: string);
     function ToString: string; override;
-    property Key[index: Integer]: String read GetKey;
+    property Keys[index: Integer]: String read GetKey;
     property Count: Integer read GetCount;
     property S[index: string]: String read GetS write SetS;
     property B[index: string]: Boolean read GetB write SetB;
