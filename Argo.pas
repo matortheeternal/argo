@@ -88,6 +88,8 @@ type
     procedure ParsePair(var P: PWideChar);
     function GetValue(key: string): TJSONValue;
     function MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
+    function GetKey(index: Integer): String;
+    function GetCount: Integer;
     function GetS(key: string): String;
     function GetB(key: string): Boolean;
     function GetI(key: string): Int64;
@@ -107,6 +109,8 @@ type
     function HasKey(key: string): Boolean;
     procedure Delete(key: string);
     function ToString: string; override;
+    property Key[index: Integer]: String read GetKey;
+    property Count: Integer read GetCount;
     property S[index: string]: String read GetS write SetS;
     property B[index: string]: Boolean read GetB write SetB;
     property I[index: string]: Int64 read GetI write SetI;
@@ -689,6 +693,16 @@ begin
     Result := TJSONValue.Create(_valueType);
     Pairs.AddObject(key, Result);
   end;
+end;
+
+function TJSONObject.GetKey(index: Integer): string;
+begin
+  Result := Pairs[index];
+end;
+
+function TJSONObject.GetCount: Integer;
+begin
+  Result := Pairs.Count;
 end;
 
 procedure TJSONObject.SetS(key: string; value: string);
