@@ -13,9 +13,15 @@ var
   ary: TJSONArray;
   json: String;
   h: Integer;
+  i: Integer;
 begin
   Describe('JSONArray', procedure
     begin
+      BeforeAll(procedure
+        begin
+          i := 0;
+        end);
+
       It('Constructor should work', procedure
         begin
           ary := TJSONArray.Create;
@@ -25,7 +31,7 @@ begin
         begin
           It('Out of bounds indices should return an empty string', procedure
             begin
-              ExpectEqual(ary.S[0], '', '');
+              ExpectEqual(ary.S[i], '', '');
             end);
 
           It('Should be able to add string values', procedure
@@ -35,13 +41,38 @@ begin
 
           It('Should be able to retrieve string values', procedure
             begin
-              ExpectEqual(ary.S[0], 'Testing');
+              ExpectEqual(ary.S[i], 'Testing');
             end);
 
           It('Should be able to replace string values', procedure
             begin
               ary.S[0] := 'abc';
-              ExpectEqual(ary.S[0], 'abc');
+              ExpectEqual(ary.S[i], 'abc');
+            end);
+        end);
+
+      Describe('Boolean values', procedure
+        begin
+          It('Out of bounds indices should return False', procedure
+            begin
+              Inc(i);
+              ExpectEqual(ary.B[i], 0);
+            end);
+
+          It('Should be able to add boolean values', procedure
+            begin
+              ary.Add(True);
+            end);
+
+          It('Should be able to retrieve boolean values', procedure
+            begin
+              ExpectEqual(ary.B[i], True);
+            end);
+
+          It('Should be able to replace boolean values', procedure
+            begin
+              ary.B[i] := False;
+              ExpectEqual(ary.B[i], False);
             end);
         end);
 
@@ -49,7 +80,8 @@ begin
         begin
           It('Out of bounds indices should return 0', procedure
             begin
-              ExpectEqual(ary.I[1], 0);
+              Inc(i);
+              ExpectEqual(ary.I[i], 0);
             end);
 
           It('Should be able to add integer values', procedure
@@ -59,13 +91,13 @@ begin
 
           It('Should be able to retrieve integer values', procedure
             begin
-              ExpectEqual(ary.I[1], 5647382910);
+              ExpectEqual(ary.I[i], 5647382910);
             end);
 
           It('Should be able to replace integer values', procedure
             begin
-              ary.I[1] := -1029384756;
-              ExpectEqual(ary.I[1], -1029384756);
+              ary.I[i] := -1029384756;
+              ExpectEqual(ary.I[i], -1029384756);
             end);
         end);
 
@@ -73,7 +105,8 @@ begin
         begin
           It('Out of bounds indices should return 0.0', procedure
             begin
-              ExpectEqual(ary.D[2], 0.0);
+              Inc(i);
+              ExpectEqual(ary.D[i], 0.0);
             end);
 
           It('Should be able to add double values', procedure
@@ -83,13 +116,13 @@ begin
 
           It('Should be able to retrieve double values', procedure
             begin
-              ExpectEqual(ary.D[2], 1.414213562);
+              ExpectEqual(ary.D[i], 1.414213562);
             end);
 
           It('Should be able to replace double values', procedure
             begin
-              ary.D[2] := -2.71828182845;
-              ExpectEqual(ary.D[2], -2.71828182845);
+              ary.D[i] := -2.71828182845;
+              ExpectEqual(ary.D[i], -2.71828182845);
             end);
         end);
 
@@ -97,7 +130,8 @@ begin
         begin
           It('Out of bounds indices should return nil', procedure
             begin
-              Expect(not Assigned(ary.A[3]));
+              Inc(i);
+              Expect(not Assigned(ary.A[i]));
             end);
 
           It('Should be able to add array values', procedure
@@ -107,14 +141,14 @@ begin
 
           It('Should be able to retrieve array values', procedure
             begin
-              h := ary.A[3].GetHashCode;
+              h := ary.A[i].GetHashCode;
               Expect(h > 0);
             end);
 
           It('Should be able to replace array values', procedure
             begin
-              ary.A[3] := TJSONArray.Create;
-              Expect(ary.A[3].GetHashCode <> h);
+              ary.A[i] := TJSONArray.Create;
+              Expect(ary.A[i].GetHashCode <> h);
             end);
         end);
 
@@ -122,7 +156,8 @@ begin
         begin
           It('Out of bounds indices should return nil', procedure
             begin
-              Expect(not Assigned(ary.O[4]));
+              Inc(i);
+              Expect(not Assigned(ary.O[i]));
             end);
 
           It('Should be able to add object values', procedure
@@ -132,14 +167,14 @@ begin
 
           It('Should be able to retrieve object values', procedure
             begin
-              h := ary.O[4].GetHashCode;
+              h := ary.O[i].GetHashCode;
               Expect(h > 0);
             end);
 
           It('Should be able to replace object values', procedure
             begin
-              ary.O[4] := TJSONObject.Create;
-              Expect(ary.O[4].GetHashCode <> h);
+              ary.O[i] := TJSONObject.Create;
+              Expect(ary.O[i].GetHashCode <> h);
             end);
         end);
     end);
