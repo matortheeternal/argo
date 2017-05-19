@@ -352,6 +352,7 @@ begin
               Expect(Pos('"integer":', json) > 0, 'Should contain key "integer"');
               Expect(Pos('"double":', json) > 0, 'Should contain key "double"');
               Expect(Pos('"array":', json) > 0, 'Should contain key "array"');
+              Expect(Pos('"object":', json) > 0, 'Should contain key "object"');
             end);
 
           It('Should serialize string values correctly', procedure
@@ -379,12 +380,18 @@ begin
               Expect(Pos('"array":[]', json) > 0, 'Should contain "array":[]');
             end);
 
+          It('Should serialize object values correctly', procedure
+            begin
+              Expect(Pos('"object":{}', json) > 0, 'Should contain "object":{}');
+            end);
+
           It('Should preserve field order from assignment', procedure
             begin
               Expect(Pos('"string":', json) < Pos('"boolean":', json), 'Should serialize string before boolean');
               Expect(Pos('"boolean":', json) < Pos('"integer":', json), 'Should serialize boolean before integer');
               Expect(Pos('"integer":', json) < Pos('"double":', json), 'Should serialize integer before double');
               Expect(Pos('"double":', json) < Pos('"array":', json), 'Should serialize double before array');
+              Expect(Pos('"array":', json) < Pos('"object":', json), 'Should serialize array before object');
             end);
         end);
     end);
