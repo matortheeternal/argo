@@ -177,6 +177,50 @@ begin
               Expect(ary.O[i].GetHashCode <> h);
             end);
         end);
+
+      Describe('Serialization', procedure
+        begin
+          BeforeAll(procedure
+            begin
+              json := ary.ToString;
+            end);
+
+          It('Should serialize object bounds', procedure
+            begin
+              ExpectEqual(json[1], '[');
+              ExpectEqual(json[Length(json)], ']');
+            end);
+
+          It('Should serialize string values correctly', procedure
+            begin
+              Expect(Pos('"abc"', json) > 0, 'Should contain "abc"');
+            end);
+
+          It('Should serialize boolean values correctly', procedure
+            begin
+              Expect(Pos('False', json) > 0, 'Should contain False');
+            end);
+
+          It('Should serialize integer values correctly', procedure
+            begin
+              Expect(Pos('-1029384756', json) > 0, 'Should contain -1029384756');
+            end);
+
+          It('Should serialize double values correctly', procedure
+            begin
+              Expect(Pos('-2.71828182845', json) > 0, 'Should contain -2.71828182845');
+            end);
+
+          It('Should serialize array values correctly', procedure
+            begin
+              Expect(Pos('[]', json) > 0, 'Should contain []');
+            end);
+
+          It('Should serialize object values correctly', procedure
+            begin
+              Expect(Pos('{}', json) > 0, 'Should contain {}');
+            end);
+        end);
     end);
 
   Describe('JSONObject', procedure
