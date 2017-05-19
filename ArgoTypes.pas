@@ -31,14 +31,17 @@ type
     procedure DeleteNode(node, parentNode: PArgoTreeNode);
     function CreateNode(name: string): PArgoTreeNode;
     function GetNode(name: String): PArgoTreeNode;
+    function GetNodeByValue(node: PArgoTreeNode; var value: Integer): PArgoTreeNode;
     procedure GetNodeContext(name: String; var cur, parent: PArgoTreeNode; var diff: Integer);
     function GetValue(name: String): Integer;
+    function GetName(index: Integer): String;
   public
     Size: Integer;
     constructor Create;
-    procedure Delete(name: String);
+    function Delete(name: String): Integer;
     procedure Add(name: String);
     property Values[index: string]: Integer read GetValue; default;
+    property Names[index: Integer]: String read GetName;
   end;
 
 implementation
@@ -114,15 +117,16 @@ begin
     MoveNode(node, parentNode, nil);
 end;
 
-procedure TArgoTree.Delete(name: string);
+function TArgoTree.Delete(name: string): Integer;
 var
   currentNode, previousNode: PArgoTreeNode;
   diff: Integer;
 begin
+  Result := -1;
   currentNode := Root;
   GetNodeContext(name, currentNode, previousNode, diff);
   if Assigned(currentNode) then begin
-    // decrement larger values
+    Result := currentNode.Value;
     DecrementNodes(Root, currentNode.Value);
     DeleteNode(currentNode, previousNode);
     Dec(Size);
@@ -177,6 +181,19 @@ begin
   Result := currentNode;
 end;
 
+function TArgoTree.GetNodeByValue(node: PArgoTreeNode; var value: Integer): PArgoTreeNode;
+begin
+  Result := nil;
+  if node.Value = value then begin
+    Result := node;
+    exit;
+  end;
+  if Assigned(node.Left) then
+    Result := GetNodeByValue(node.Left, value);
+  if (not Assigned(Result)) and Assigned(node.Left) then
+    Result := GetNodeByValue(node.Right, value);
+end;
+
 function TArgoTree.CreateNode(name: string): PArgoTreeNode;
 begin
   New(Result);
@@ -188,8 +205,20 @@ begin
 end;
 
 function TArgoTree.GetValue(name: string): Integer;
+var
+  node: PArgoTreeNode;
 begin
-  Result := GetNode(name).Value;
+  Result := -1;
+  node := GetNode(name);
+  if Assigned(node) then
+    Result := node.Value;
+end;
+
+function TArgoTree.GetName(index: Integer): String;
+begin
+  if (index < 0) or (index >= Size) then
+    raise Exception.Create('Tree index out of bounds (' + IntToStr(index) + ')');
+  Result := GetNodeByValue(Root, index).Name;
 end;
 
 procedure TArgoTree.GetNodeContext(name: String; var cur, parent: PArgoTreeNode; var diff: Integer);
