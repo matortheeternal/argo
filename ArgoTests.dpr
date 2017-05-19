@@ -5,27 +5,74 @@ program ArgoTests;
 uses
   SysUtils,
   Mahogany in 'lib\Mahogany\Mahogany.pas',
-  Argo in 'Argo.pas';
+  Argo in 'Argo.pas',
+  ArgoTypes in 'ArgoTypes.pas';
 
 procedure BuildMahoganyTests;
 var
   obj: TJSONObject;
   ary: TJSONArray;
+  tree: TArgoTree;
   json: String;
   h: Integer;
   i: Integer;
 begin
+  Describe('ArgoTree', procedure
+    begin
+      BeforeAll(procedure
+        begin
+          tree := TArgoTree.Create;
+        end);
+
+      It('Should be able to add values', procedure
+        begin
+          tree.Add('test');
+          tree.Add('adding');
+          tree.Add('values');
+          tree.Add('to');
+          tree.Add('tree');
+          ExpectEqual(tree.Size, 5);
+        end);
+
+      It('Should be able to get values', procedure
+        begin
+          ExpectEqual(tree['test'], 0);
+          ExpectEqual(tree['adding'], 1);
+          ExpectEqual(tree['values'], 2);
+          ExpectEqual(tree['to'], 3);
+          ExpectEqual(tree['tree'], 4);
+        end);
+
+      It('Should be able to delete values', procedure
+        begin
+          tree.Delete('adding');
+          ExpectEqual(tree.Size, 4);
+        end);
+
+      It('Should decrement larger values when value is deleted', procedure
+        begin
+          ExpectEqual(tree['test'], 0);
+          ExpectEqual(tree['values'], 1);
+          ExpectEqual(tree['to'], 2);
+          ExpectEqual(tree['tree'], 3);
+        end);
+
+      It('Should raise an exception when trying to set existing key', procedure
+        begin
+          ExpectException(procedure
+            begin
+              tree.Add('test');
+            end, 'TArgoTree: Key "test" already present.');
+        end);
+    end);
+
   Describe('JSONArray', procedure
     begin
       BeforeAll(procedure
         begin
           i := 0;
-        end);
-
-      It('Constructor should work', procedure
-        begin
           ary := TJSONArray.Create;
-        end, true);
+        end);
 
       Describe('String values', procedure
         begin
@@ -268,10 +315,10 @@ begin
 
   Describe('JSONObject', procedure
     begin
-      It('Constructor should work', procedure
+      BeforeAll(procedure
         begin
           obj := TJSONObject.Create;
-        end, true);
+        end);
 
       Describe('String values', procedure
         begin
