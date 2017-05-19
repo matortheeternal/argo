@@ -37,7 +37,7 @@ type
     procedure ParseNumeric(var P: PWideChar);
     function GetJSONValueType: TJSONValueType;
   public
-    constructor Create(_valueType: TJSONValueType); overload;
+    constructor Create(json: String); overload;
     constructor Create(var P: PWideChar); overload;
     destructor Destroy; override;
     procedure Put(value: String); overload;
@@ -101,7 +101,7 @@ type
     function GetValueFromIndex(index: Integer): TJSONValue;
     procedure SetValue(key: String; value: TJSONValue);
     procedure SetValueFromIndex(index: Integer; value: TJSONValue);
-    function MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
+    function MakeValue(key: string): TJSONValue;
     function GetCount: Integer;
     function GetS(key: string): String;
     function GetB(key: string): Boolean;
@@ -314,6 +314,14 @@ begin
 end;
 
 { TJSONValue Deserialization }
+constructor TJSONValue.Create(json: String);
+var
+  P: PWideChar;
+begin
+  P := PWideChar(json);
+  Create(P);
+end;
+
 constructor TJSONValue.Create(var P: PWideChar);
 begin
   case P^ of
@@ -444,11 +452,6 @@ end;
 { === GENERAL === }
 
 { TJSONValue }
-constructor TJSONValue.Create(_valueType: TJSONValueType);
-begin
-  _t := _valueType;
-end;
-
 destructor TJSONValue.Destroy;
 begin
   if _t = jtArray then _v.a.Free;
@@ -754,13 +757,11 @@ begin
     Result := value._v.o;
 end;
 
-function TJSONObject.MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
+function TJSONObject.MakeValue(key: string): TJSONValue;
 begin
   Result := GetValue(key);
-  if Assigned(Result) then
-    Result._t := _valueType
-  else begin
-    Result := TJSONValue.Create(_valueType);
+  if not Assigned(Result) then begin
+    Result := TJSONValue.Create;
     Pairs.AddObject(key, Result);
   end;
 end;
@@ -772,32 +773,32 @@ end;
 
 procedure TJSONObject.SetS(key: string; value: string);
 begin
-  MakeValue(key, jtString)._v.s := AllocString(value);
+  MakeValue(key).Put(value);
 end;
 
 procedure TJSONObject.SetB(key: string; value: boolean);
 begin
-  MakeValue(key, jtBoolean)._v.b := value;
+  MakeValue(key).Put(value);
 end;
 
 procedure TJSONObject.SetI(key: string; value: Int64);
 begin
-  MakeValue(key, jtInt)._v.i := value;
+  MakeValue(key).Put(value);
 end;
 
 procedure TJSONObject.SetD(key: string; value: Double);
 begin
-  MakeValue(key, jtDouble)._v.d := value;
+  MakeValue(key).Put(value);
 end;
 
 procedure TJSONObject.SetA(key: string; value: TJSONArray);
 begin
-  MakeValue(key, jtArray)._v.a := value;
+  MakeValue(key).Put(value);
 end;
 
 procedure TJSONObject.SetO(key: string; value: TJSONObject);
 begin
-  MakeValue(key, jtObject)._v.o := value;
+  MakeValue(key).Put(value);
 end;
 
 function TJSONObject.HasKey(key: string): Boolean;
