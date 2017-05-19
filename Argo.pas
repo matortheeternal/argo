@@ -35,16 +35,18 @@ type
     procedure ParseString(var P: PWideChar);
     procedure ParseBoolean(var P: PWideChar);
     procedure ParseNumeric(var P: PWideChar);
+    function GetJSONValueType: TJSONValueType;
   public
     constructor Create(_valueType: TJSONValueType); overload;
     constructor Create(var P: PWideChar); overload;
     destructor Destroy; override;
     function ToString: string; override;
+    property JSONValueType: TJSONValueType read GetJSONValueType;
   end;
 
   TJSONArray = class(TObject)
   private
-    Values: TList;
+    _Values: TList;
     function GetCount: Integer;
     function GetValue(index: Integer): TJSONValue;
     function MakeValue(index: Integer; _valueType: TJSONValueType): TJSONValue;
@@ -68,6 +70,7 @@ type
     procedure Delete(index: Integer);
     function ToString: string; override;
     property Count: Integer read GetCount;
+    property Values[index: Integer]: TJSONValue read GetValue; default;
     property S[index: Integer]: String read GetS write SetS;
     property B[index: Integer]: Boolean read GetB write SetB;
     property I[index: Integer]: Int64 read GetI write SetI;
@@ -86,9 +89,13 @@ type
   private
     Pairs: TStringList;
     procedure ParsePair(var P: PWideChar);
-    function GetValue(key: string): TJSONValue;
-    function MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
     function GetKey(index: Integer): String;
+    procedure SetKey(index: Integer; key: String);
+    function GetValue(key: string): TJSONValue;
+    function GetValueFromIndex(index: Integer): TJSONValue;
+    procedure SetValue(key: String; value: TJSONValue);
+    procedure SetValueFromIndex(index: Integer; value: TJSONValue);
+    function MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
     function GetCount: Integer;
     function GetS(key: string): String;
     function GetB(key: string): Boolean;
@@ -110,7 +117,9 @@ type
     function HasKey(key: string): Boolean;
     procedure Delete(key: string);
     function ToString: string; override;
-    property Keys[index: Integer]: String read GetKey;
+    property Keys[index: Integer]: String read GetKey write SetKey;
+    property Values[index: string]: TJSONValue read GetValue write SetValue; default;
+    property ValueFromIndex[index: Integer]: TJSONValue read GetValueFromIndex write SetValueFromIndex;
     property Count: Integer read GetCount;
     property S[index: string]: String read GetS write SetS;
     property B[index: string]: Boolean read GetB write SetB;
@@ -119,9 +128,6 @@ type
     property O[index: string]: TJSONObject read GetO write SetO;
     property A[index: string]: TJSONArray read GetA write SetA;
   end;
-
-  // HELPER FUNCTIONS
-  // TODO
 
 
 implementation
@@ -277,7 +283,7 @@ constructor TJSONArray.Create(var P: PWideChar);
 var
   c: WideChar;
 begin
-  Values := TList.Create;
+  _Values := TList.Create;
   LastToken := False;
   while true do begin
     Inc(P);
@@ -290,7 +296,7 @@ begin
         if LastToken then
           raise JSONException.Create(jxCommaExpected, P)
         else
-          Values.Add(TJSONValue.Create(P));
+          _Values.Add(TJSONValue.Create(P));
         LastToken := not ParseSeparation(P, ',');
         Dec(P); // reposition for next iteration
       end;
@@ -388,6 +394,11 @@ begin
   end;
 end;
 
+function TJSONValue.GetJSONValueType: TJSONValueType;
+begin
+  Result := _t;
+end;
+
 { === GENERAL === }
 
 { TJSONValue }
@@ -406,29 +417,29 @@ end;
 { TJSONArray }
 constructor TJSONArray.Create;
 begin
-  Values := TList.Create;
+  _Values := TList.Create;
 end;
 
 destructor TJSONArray.Destroy;
 var
   i: Integer;
 begin
-  for i := 0 to Pred(Values.Count) do
-    TJSONValue(Values[i]).Free;
-  Values.Free;
+  for i := 0 to Pred(_Values.Count) do
+    TJSONValue(_Values[i]).Free;
+  _Values.Free;
   inherited;
 end;
 
 function TJSONArray.GetCount: Integer;
 begin
-   Result := Values.Count;
+   Result := _Values.Count;
 end;
 
 function TJSONArray.GetValue(index: Integer): TJSONValue;
 begin
   Result := nil;
-  if index < Values.Count then
-    Result := TJSONValue(Values[index]);
+  if index < _Values.Count then
+    Result := TJSONValue(_Values[index]);
 end;
 
 function TJSONArray.MakeValue(index: Integer; _valueType: TJSONValueType): TJSONValue;
@@ -438,7 +449,7 @@ begin
     Result._t := _valueType
   else begin
     Result := TJSONValue.Create(_valueType);
-    Values.Add(Result);
+    _Values.Add(Result);
   end;
 end;
 
@@ -538,7 +549,7 @@ var
 begin
   newValue := TJSONValue.Create(jtString);
   newValue._v.s := AllocString(value);
-  Result := Values.Add(newValue);
+  Result := _Values.Add(newValue);
 end;
 
 function TJSONArray.Add(value: Boolean): Integer;
@@ -547,7 +558,7 @@ var
 begin
   newValue := TJSONValue.Create(jtBoolean);
   newValue._v.b := value;
-  Result := Values.Add(newValue);
+  Result := _Values.Add(newValue);
 end;
 
 function TJSONArray.Add(value: Int64): Integer;
@@ -556,7 +567,7 @@ var
 begin
   newValue := TJSONValue.Create(jtInt);
   newValue._v.i := value;
-  Result := Values.Add(newValue);
+  Result := _Values.Add(newValue);
 end;
 
 function TJSONArray.Add(value: Double): Integer;
@@ -565,7 +576,7 @@ var
 begin
   newValue := TJSONValue.Create(jtDouble);
   newValue._v.d := value;
-  Result := Values.Add(newValue);
+  Result := _Values.Add(newValue);
 end;
 
 function TJSONArray.Add(value: TJSONArray): Integer;
@@ -574,7 +585,7 @@ var
 begin
   newValue := TJSONValue.Create(jtArray);
   newValue._v.a := value;
-  Result := Values.Add(newValue);
+  Result := _Values.Add(newValue);
 end;
 
 function TJSONArray.Add(value: TJSONObject): Integer;
@@ -583,13 +594,13 @@ var
 begin
   newValue := TJSONValue.Create(jtObject);
   newValue._v.o := value;
-  Result := Values.Add(newValue);
+  Result := _Values.Add(newValue);
 end;
 
 procedure TJSONArray.Delete(index: Integer);
 begin
-  if index < Values.Count then
-    Values.Delete(index);
+  if index < _Values.Count then
+    _Values.Delete(index);
 end;
 
 function TJSONArray.ToString: string;
@@ -597,9 +608,9 @@ var
   i: Integer;
 begin
   Result := '[';
-  for i := 0 to Pred(Values.Count) do
-    Result := Result + TJSONValue(Values[i]).ToString + ',';
-  if Values.Count > 0 then
+  for i := 0 to Pred(_Values.Count) do
+    Result := Result + TJSONValue(_Values[i]).ToString + ',';
+  if _Values.Count > 0 then
     SetLength(Result, Length(Result) - 1);
   Result := Result + ']';
 end;
@@ -620,7 +631,17 @@ begin
   inherited;
 end;
 
-function TJSONObject.GetValue(key: string): TJSONValue;
+function TJSONObject.GetKey(index: Integer): String;
+begin
+  Result := Pairs[index];
+end;
+
+procedure TJSONObject.SetKey(index: Integer; key: String);
+begin
+  Pairs[index] := key;
+end;
+
+function TJSONObject.GetValue(key: String): TJSONValue;
 var
   i: Integer;
 begin
@@ -628,6 +649,27 @@ begin
   i := Pairs.IndexOf(key);
   if i > -1 then
     Result := TJSONValue(Pairs.Objects[i]);
+end;
+
+function TJSONObject.GetValueFromIndex(index: Integer): TJSONValue;
+begin
+  Result := TJSONValue(Pairs.Objects[index]);
+end;
+
+procedure TJSONObject.SetValue(key: String; value: TJSONValue);
+var
+  i: Integer;
+begin
+  i := Pairs.IndexOf(key);
+  if i > -1 then
+    Pairs.Objects[i] := value
+  else
+    Pairs.AddObject(key, value);
+end;
+
+procedure TJSONObject.SetValueFromIndex(index: Integer; value: TJSONValue);
+begin
+  Pairs.Objects[index] := value;
 end;
 
 function TJSONObject.GetS(key: string): string;
@@ -699,11 +741,6 @@ begin
     Result := TJSONValue.Create(_valueType);
     Pairs.AddObject(key, Result);
   end;
-end;
-
-function TJSONObject.GetKey(index: Integer): string;
-begin
-  Result := Pairs[index];
 end;
 
 function TJSONObject.GetCount: Integer;
