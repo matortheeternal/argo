@@ -11,7 +11,6 @@ procedure BuildMahoganyTests;
 var
   obj: TJSONObject;
   ary: TJSONArray;
-  P: PWideChar;
   json: String;
   h: Integer;
   i: Integer;
@@ -227,8 +226,7 @@ begin
         begin
           BeforeAll(procedure
             begin
-              P := PWideChar(json);
-              ary := TJSONArray.Create(P);
+              ary := TJSONArray.Create(json);
             end);
 
           It('Should deserialize the correct number of values', procedure

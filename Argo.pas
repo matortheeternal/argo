@@ -62,6 +62,7 @@ type
     procedure SetO(index: Integer; value: TJSONObject);
   public
     constructor Create; overload;
+    constructor Create(json: string); overload;
     constructor Create(var P: PWideChar); overload;
     destructor Destroy; override;
     procedure Delete(index: Integer);
@@ -84,7 +85,6 @@ type
   TJSONObject = class(TObject)
   private
     Pairs: TStringList;
-    procedure ParseObject(var P: PWideChar);
     procedure ParsePair(var P: PWideChar);
     function GetValue(key: string): TJSONValue;
     function MakeValue(key: string; _valueType: TJSONValueType): TJSONValue;
@@ -105,6 +105,7 @@ type
   public
     constructor Create; overload;
     constructor Create(json: string); overload;
+    constructor Create(var P: PWideChar) overload;
     destructor Destroy; override;
     function HasKey(key: string): Boolean;
     procedure Delete(key: string);
@@ -216,16 +217,16 @@ constructor TJSONObject.Create(json: string);
 var
   P: PWideChar;
 begin
-  Pairs := TStringList.Create;
-  LastToken := False;
   P := PWideChar(json);
-  ParseObject(P);
+  Create(P);
 end;
 
-procedure TJSONObject.ParseObject(var P: PWideChar);
+constructor TJSONObject.Create(var P: PWideChar);
 var
   c: WideChar;
 begin
+  Pairs := TStringList.Create;
+  LastToken := False;
   if P^ <> '{' then
     raise JSONException.Create(jxStartBracket, P + 8);
   while true do begin
@@ -264,11 +265,20 @@ begin
 end;
 
 { TJSONArray Deserialization }
+constructor TJSONArray.Create(json: String);
+var
+  P: PWideChar;
+begin
+  P := PWideChar(json);
+  Create(P);
+end;
+
 constructor TJSONArray.Create(var P: PWideChar);
 var
   c: WideChar;
 begin
   Values := TList.Create;
+  LastToken := False;
   while true do begin
     Inc(P);
     c := P^;
@@ -363,8 +373,7 @@ end;
 procedure TJSONValue.ParseObject(var P: PWidechar);
 begin
   _t := jtObject;
-  _v.o := TJSONObject.Create;
-  _v.o.ParseObject(P);
+  _v.o := TJSONObject.Create(P);
 end;
 
 function TJSONValue.ToString: String;
