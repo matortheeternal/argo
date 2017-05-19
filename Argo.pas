@@ -3,7 +3,8 @@ unit Argo;
 interface
 
 uses
-  SysUtils, Classes, Variants;
+  SysUtils, Classes, Variants,
+  ArgoTypes;
 
 type
   TJSONValueType = (jtString, jtBoolean, jtInt, jtDouble, jtArray, jtObject);
@@ -93,8 +94,10 @@ type
 
   TJSONObject = class(TObject)
   private
-    Pairs: TFastStringList;
+    _Values: TList;
+    _Keys: TArgoTree;
     procedure ParsePair(var P: PWideChar);
+    procedure AddPair(key: string; value: TJSONValue);
     function GetKey(index: Integer): String;
     function GetValue(key: string): TJSONValue;
     function GetValueFromIndex(index: Integer): TJSONValue;
@@ -242,7 +245,8 @@ constructor TJSONObject.Create(var P: PWideChar);
 var
   c: WideChar;
 begin
-  Pairs := TFastStringList.Create;
+  _Values := TList.Create;
+  _Keys := TArgoTree.Create;
   LastToken := False;
   if P^ <> '{' then
     raise JSONException.Create(jxStartBracket, P + 8);
@@ -277,7 +281,7 @@ begin
   if not ParseSeparation(P, ':') then
     raise JSONException.Create(jxColonExpected, P);
   value := TJSONValue.Create(P);
-  Pairs.AddObject(key, value);
+  AddPair(key, value);
   LastToken := not ParseSeparation(P, ',');
 end;
 
@@ -648,22 +652,24 @@ end;
 { TJSONObject }
 constructor TJSONObject.Create;
 begin
-  Pairs := TFastStringList.Create;
+  _Values := TList.Create;
+  _Keys := TArgoTree.Create;
 end;
 
 destructor TJSONObject.Destroy;
 var
   i: Integer;
 begin
-  for i := 0 to Pred(Pairs.Count) do
-    TJSONValue(Pairs.Objects[i]).Free;
-  Pairs.Free;
+  for i := 0 to Pred(_Values.Count) do
+    TJSONValue(_Values[i]).Free;
+  _Values.Free;
+  _Keys.Free;
   inherited;
 end;
 
 function TJSONObject.GetKey(index: Integer): String;
 begin
-  Result := Pairs[index];
+  Result := _Keys.Names[index];
 end;
 
 function TJSONObject.GetValue(key: String): TJSONValue;
@@ -671,30 +677,30 @@ var
   i: Integer;
 begin
   Result := nil;
-  i := Pairs.IndexOf(key);
+  i := _Keys[key];
   if i > -1 then
-    Result := TJSONValue(Pairs.Objects[i]);
+    Result := TJSONValue(_Values[i]);
 end;
 
 function TJSONObject.GetValueFromIndex(index: Integer): TJSONValue;
 begin
-  Result := TJSONValue(Pairs.Objects[index]);
+  Result := TJSONValue(_Values[index]);
 end;
 
 procedure TJSONObject.SetValue(key: String; value: TJSONValue);
 var
   i: Integer;
 begin
-  i := Pairs.IndexOf(key);
+  i := _Keys[key];
   if i > -1 then
-    Pairs.Objects[i] := value
+    _Values[i] := value
   else
-    Pairs.AddObject(key, value);
+    AddPair(key, value);
 end;
 
 procedure TJSONObject.SetValueFromIndex(index: Integer; value: TJSONValue);
 begin
-  Pairs.Objects[index] := value;
+  _Values[index] := value;
 end;
 
 function TJSONObject.GetS(key: string): string;
@@ -757,18 +763,24 @@ begin
     Result := value._v.o;
 end;
 
+procedure TJSONObject.AddPair(key: string; value: TJSONValue);
+begin
+  _Keys.Add(key);
+  _Values.Add(value);
+end;
+
 function TJSONObject.MakeValue(key: string): TJSONValue;
 begin
   Result := GetValue(key);
   if not Assigned(Result) then begin
     Result := TJSONValue.Create;
-    Pairs.AddObject(key, Result);
+    AddPair(key, Result);
   end;
 end;
 
 function TJSONObject.GetCount: Integer;
 begin
-  Result := Pairs.Count;
+  Result := _Keys.Size;
 end;
 
 procedure TJSONObject.SetS(key: string; value: string);
@@ -803,16 +815,16 @@ end;
 
 function TJSONObject.HasKey(key: string): Boolean;
 begin
-  Result := Pairs.IndexOf(key) > -1;
+  Result := _Keys[key] > -1;
 end;
 
 procedure TJSONObject.Delete(key: string);
 var
   i: Integer;
 begin
-  i := Pairs.IndexOf(key);
+  i := _Keys.Delete(key);
   if i > -1 then
-    Pairs.Delete(i);
+    _Values.Delete(i);
 end;
 
 function TJSONObject.ToString: String;
@@ -820,9 +832,9 @@ var
   i: Integer;
 begin
   Result := '{';
-  for i := 0 to Pred(Pairs.Count) do
-    Result := Result + '"' + Pairs[i] + '":' + TJSONValue(Pairs.Objects[i]).ToString + ',';
-  if Pairs.Count > 0 then
+  for i := 0 to Pred(_Keys.Size) do
+    Result := Result + '"' + _Keys.Names[i] + '":' + TJSONValue(_Values[i]).ToString + ',';
+  if _Keys.Size > 0 then
     SetLength(Result, Length(Result) - 1);
   Result := Result + '}';
 end;

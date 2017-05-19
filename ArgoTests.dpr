@@ -551,7 +551,7 @@ begin
               ExpectException(procedure
                 begin
                   obj.Keys[6]
-                end, 'List index out of bounds (6)');
+                end, 'Tree index out of bounds (6)');
             end);
         end);
 
