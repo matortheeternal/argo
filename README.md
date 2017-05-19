@@ -64,10 +64,10 @@ The name is a reference to Jason's ship from Greek Mythology, The Argo.
 ```pas
   ary.S[0] := 'abc';
   ary.B[1] := True;
-  ary.I[1] := -987;
-  ary.D[2] := 1.6180339;
-  ary.A[3] := TJSONArray.Create('["hello"]');
-  ary.O[4] := TJSONObject.Create('{"world":0}');
+  ary.I[2] := -987;
+  ary.D[3] := 1.6180339;
+  ary.A[4] := TJSONArray.Create('["hello"]');
+  ary.O[5] := TJSONObject.Create('{"world":0}');
 ```
 
 #### Removing values
