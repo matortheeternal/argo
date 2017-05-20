@@ -88,8 +88,9 @@ type
     function Add(value: Boolean): Integer; overload;
     function Add(value: Int64): Integer; overload;
     function Add(value: Double): Integer; overload;
-    function Add(value: TJSONObject): Integer; overload;
     function Add(value: TJSONArray): Integer; overload;
+    function Add(value: TJSONObject): Integer; overload;
+    function Add(value: TJSONValue): Integer; overload;
   end;
 
   TJSONObject = class(TObject)
@@ -629,6 +630,11 @@ function TJSONArray.Add(value: TJSONObject): Integer;
 begin
   Result := _Values.Add(TJSONValue.Create);
   TJSONValue(_Values[Result]).Put(value);
+end;
+
+function TJSONArray.Add(value: TJSONValue): Integer;
+begin
+  Result := _Values.Add(value);
 end;
 
 procedure TJSONArray.Delete(index: Integer);
