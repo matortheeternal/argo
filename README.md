@@ -12,7 +12,7 @@ The name is a reference to **J**a**son**'s ship from Greek Mythology, The Argo.
 - Helpful exceptions with context when JSON parsing fails.
 - Easy to understand code which you can adapt to your own needs.  There's only three major classes: TJSONValue, TJSONArray, and TJSONObject.
 - Straightforward and simple API.
-- High performance - faster than [superobject](https://github.com/hgourvest/superobject) on all operations except deserialization, where it is approximately 20% slower.  See [argo-benchmarks](https://github.com/matortheeternal/argo-benchmarks) for more details.
+- High performance - faster than [superobject](https://github.com/hgourvest/superobject) on all operations except deserialization, where it is approximately 30% slower.  See [argo-benchmarks](https://github.com/matortheeternal/argo-benchmarks) for more details.
 
 ## Example code
 
