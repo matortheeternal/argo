@@ -74,11 +74,43 @@ begin
           ary := TJSONArray.Create;
         end);
 
+      Describe('Null values', procedure
+        begin
+          It('Out of bounds indices should raise an exception', procedure
+            begin
+              ExpectException(procedure
+                begin
+                  ary[i]
+                end, 'List index out of bounds (0)');
+            end);
+
+          It('Should be able to add null values', procedure
+            begin
+              ary.AddValue(nil);
+            end);
+
+          It('Should be able to retrieve null values', procedure
+            begin
+              h := ary[i].GetHashCode;
+              Expect(h > 0);
+            end);
+
+          It('Should be able to replace null values', procedure
+            begin
+              ary[i] := nil;
+              Expect(ary[i].GetHashCode <> h);
+            end);
+        end);
+
       Describe('String values', procedure
         begin
-          It('Out of bounds indices should return an empty string', procedure
+          It('Out of bounds indices should raise an exception', procedure
             begin
-              ExpectEqual(ary.S[i], '', '');
+              Inc(i);
+              ExpectException(procedure
+                begin
+                  ary.S[i]
+                end, 'List index out of bounds (1)');
             end);
 
           It('Should be able to add string values', procedure
@@ -93,17 +125,20 @@ begin
 
           It('Should be able to replace string values', procedure
             begin
-              ary.S[0] := 'abc';
+              ary.S[i] := 'abc';
               ExpectEqual(ary.S[i], 'abc');
             end);
         end);
 
       Describe('Boolean values', procedure
         begin
-          It('Out of bounds indices should return False', procedure
+          It('Out of bounds indices should raise an exception', procedure
             begin
               Inc(i);
-              ExpectEqual(ary.B[i], 0);
+              ExpectException(procedure
+                begin
+                  ary.B[i]
+                end, 'List index out of bounds (2)');
             end);
 
           It('Should be able to add boolean values', procedure
@@ -125,10 +160,13 @@ begin
 
       Describe('Integer values', procedure
         begin
-          It('Out of bounds indices should return 0', procedure
+          It('Out of bounds indices should raise an exception', procedure
             begin
               Inc(i);
-              ExpectEqual(ary.I[i], 0);
+              ExpectException(procedure
+                begin
+                  ary.I[i]
+                end, 'List index out of bounds (3)');
             end);
 
           It('Should be able to add integer values', procedure
@@ -150,10 +188,13 @@ begin
 
       Describe('Double values', procedure
         begin
-          It('Out of bounds indices should return 0.0', procedure
+          It('Out of bounds indices should raise an exception', procedure
             begin
               Inc(i);
-              ExpectEqual(ary.D[i], 0.0);
+              ExpectException(procedure
+                begin
+                  ary.D[i]
+                end, 'List index out of bounds (4)');
             end);
 
           It('Should be able to add double values', procedure
@@ -175,10 +216,13 @@ begin
 
       Describe('Array values', procedure
         begin
-          It('Out of bounds indices should return nil', procedure
+          It('Out of bounds indices should raise an exception', procedure
             begin
               Inc(i);
-              Expect(not Assigned(ary.A[i]));
+              ExpectException(procedure
+                begin
+                  ary.A[i]
+                end, 'List index out of bounds (5)');
             end);
 
           It('Should be able to add array values', procedure
@@ -201,10 +245,13 @@ begin
 
       Describe('Object values', procedure
         begin
-          It('Out of bounds indices should return nil', procedure
+          It('Out of bounds indices should raise an exception', procedure
             begin
               Inc(i);
-              Expect(not Assigned(ary.O[i]));
+              ExpectException(procedure
+                begin
+                  ary.O[i]
+                end, 'List index out of bounds (6)');
             end);
 
           It('Should be able to add object values', procedure
@@ -236,6 +283,11 @@ begin
             begin
               ExpectEqual(json[1], '[');
               ExpectEqual(json[Length(json)], ']');
+            end);
+
+          It('Should serialize null values correctly', procedure
+            begin
+              Expect(Pos('null', json) > 0, 'Should contain null');
             end);
 
           It('Should serialize string values correctly', procedure
@@ -278,37 +330,42 @@ begin
 
           It('Should deserialize the correct number of values', procedure
             begin
-              ExpectEqual(ary.Count, 6);
+              ExpectEqual(ary.Count, 7);
+            end);
+
+          It('Should deserialize null values correctly', procedure
+            begin
+              Expect(ary[0].IsNull);
             end);
 
           It('Should deserialize string values correctly', procedure
             begin
-              ExpectEqual(ary.S[0], 'abc');
+              ExpectEqual(ary.S[1], 'abc');
             end);
 
           It('Should deserialize boolean values correctly', procedure
             begin
-              ExpectEqual(ary.B[1], False);
+              ExpectEqual(ary.B[2], False);
             end);
 
           It('Should deserialize integer values correctly', procedure
             begin
-              ExpectEqual(ary.I[2], -1029384756);
+              ExpectEqual(ary.I[3], -1029384756);
             end);
 
           It('Should deserialize double values correctly', procedure
             begin
-              ExpectEqual(ary.D[3], -2.71828182845);
+              ExpectEqual(ary.D[4], -2.71828182845);
             end);
 
           It('Should deserialize array values correctly', procedure
             begin
-              Expect(ary.A[4].GetHashCode > 0);
+              Expect(ary.A[5].GetHashCode > 0);
             end);
 
           It('Should deserialize object values correctly', procedure
             begin
-              Expect(ary.O[5].GetHashCode > 0);
+              Expect(ary.O[6].GetHashCode > 0);
             end);
         end);
     end);
@@ -318,6 +375,31 @@ begin
       BeforeAll(procedure
         begin
           obj := TJSONObject.Create;
+        end);
+
+      Describe('Null values', procedure
+        begin
+          It('Unassigned keys should return nil', procedure
+            begin
+              Expect(not Assigned(obj['null']));
+            end);
+
+          It('Should be able to set null values', procedure
+            begin
+              obj['null'] := nil;
+            end);
+
+          It('Should be able to retrieve null values', procedure
+            begin
+              h := obj['null'].GetHashCode;
+              Expect(h > 0);
+            end);
+
+          It('Should be able to replace null values', procedure
+            begin
+              obj['null'] := nil;
+              Expect(obj['null'].GetHashCode <> h);
+            end);
         end);
 
       Describe('String values', procedure
@@ -481,12 +563,18 @@ begin
 
           It('Should serialize keys', procedure
             begin
+              Expect(Pos('"null":', json) > 0, 'Should contain key "null"');
               Expect(Pos('"string":', json) > 0, 'Should contain key "string"');
               Expect(Pos('"boolean":', json) > 0, 'Should contain key "boolaen"');
               Expect(Pos('"integer":', json) > 0, 'Should contain key "integer"');
               Expect(Pos('"double":', json) > 0, 'Should contain key "double"');
               Expect(Pos('"array":', json) > 0, 'Should contain key "array"');
               Expect(Pos('"object":', json) > 0, 'Should contain key "object"');
+            end);
+
+          It('Should serialize null values correctly', procedure
+            begin
+              Expect(Pos('"null":null', json) > 0, 'Should contain "null":null');
             end);
 
           It('Should serialize string values correctly', procedure
@@ -521,6 +609,7 @@ begin
 
           It('Should preserve field order from assignment', procedure
             begin
+              Expect(Pos('"null":', json) < Pos('"string":', json), 'Should serialize null before string');
               Expect(Pos('"string":', json) < Pos('"boolean":', json), 'Should serialize string before boolean');
               Expect(Pos('"boolean":', json) < Pos('"integer":', json), 'Should serialize boolean before integer');
               Expect(Pos('"integer":', json) < Pos('"double":', json), 'Should serialize integer before double');
@@ -533,25 +622,26 @@ begin
         begin
           It('Should allow you access pairs count', procedure
             begin
-              ExpectEqual(obj.Count, 6);
+              ExpectEqual(obj.Count, 7);
             end);
 
           It('Should allow you to access pair keys by index', procedure
             begin
-              ExpectEqual(obj.Keys[0], 'string');
-              ExpectEqual(obj.Keys[1], 'boolean');
-              ExpectEqual(obj.Keys[2], 'integer');
-              ExpectEqual(obj.Keys[3], 'double');
-              ExpectEqual(obj.Keys[4], 'array');
-              ExpectEqual(obj.Keys[5], 'object');
+              ExpectEqual(obj.Keys[0], 'null');
+              ExpectEqual(obj.Keys[1], 'string');
+              ExpectEqual(obj.Keys[2], 'boolean');
+              ExpectEqual(obj.Keys[3], 'integer');
+              ExpectEqual(obj.Keys[4], 'double');
+              ExpectEqual(obj.Keys[5], 'array');
+              ExpectEqual(obj.Keys[6], 'object');
             end);
 
           It('Should raise an exception if key index is out of bounds', procedure
             begin
               ExpectException(procedure
                 begin
-                  obj.Keys[6]
-                end, 'Tree index out of bounds (6)');
+                  obj.Keys[7]
+                end, 'Tree index out of bounds (7)');
             end);
         end);
 
@@ -564,7 +654,12 @@ begin
 
           It('Should deserialize the correct number of pairs', procedure
             begin
-              ExpectEqual(obj.Count, 6);
+              ExpectEqual(obj.Count, 7);
+            end);
+
+          It('Should deserialize null values correctly', procedure
+            begin
+              Expect(obj['null'].IsNull);
             end);
 
           It('Should deserialize string values correctly', procedure
