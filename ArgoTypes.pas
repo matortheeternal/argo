@@ -33,14 +33,14 @@ type
     function GetNode(name: String): PArgoTreeNode;
     function GetNodeByValue(node: PArgoTreeNode; var value: Integer): PArgoTreeNode;
     procedure GetNodeContext(name: String; var cur, parent: PArgoTreeNode; var diff: Integer);
-    function GetValue(name: String): Integer;
+    function IndexOf(name: String): Integer;
     function GetName(index: Integer): String;
   public
-    Size: Integer;
+    Count: Integer;
     constructor Create;
     function Delete(name: String): Integer;
     procedure Add(name: String);
-    property Values[index: string]: Integer read GetValue; default;
+    property Values[index: string]: Integer read IndexOf; default;
     property Names[index: Integer]: String read GetName;
   end;
 
@@ -58,7 +58,7 @@ end;
 { TBinaryTree }
 constructor TArgoTree.Create;
 begin
-  Size := 0;
+  Count := 0;
 end;
 
 procedure TArgoTree.DecrementNodes(node: PArgoTreeNode; value: Integer);
@@ -129,7 +129,7 @@ begin
     Result := currentNode.Value;
     DecrementNodes(Root, currentNode.Value);
     DeleteNode(currentNode, previousNode);
-    Dec(Size);
+    Dec(Count);
   end;
 end;
 
@@ -198,13 +198,13 @@ function TArgoTree.CreateNode(name: string): PArgoTreeNode;
 begin
   New(Result);
   Result.name := name;
-  Result.value := Size;
+  Result.value := Count;
   Result.right := nil;
   Result.left := nil;
-  Inc(Size);
+  Inc(Count);
 end;
 
-function TArgoTree.GetValue(name: string): Integer;
+function TArgoTree.IndexOf(name: string): Integer;
 var
   node: PArgoTreeNode;
 begin
@@ -216,7 +216,7 @@ end;
 
 function TArgoTree.GetName(index: Integer): String;
 begin
-  if (index < 0) or (index >= Size) then
+  if (index < 0) or (index >= Count) then
     raise Exception.Create('Tree index out of bounds (' + IntToStr(index) + ')');
   Result := GetNodeByValue(Root, index).Name;
 end;
@@ -248,7 +248,7 @@ begin
   // create new node
   currentNode := Root;
   GetNodeContext(name, currentNode, previousNode, diff);
-  if Assigned(currentNode) then 
+  if Assigned(currentNode) then
     raise Exception.Create('TArgoTree: Key "' + name + '" already present.')
   else begin
     if diff > 0 then

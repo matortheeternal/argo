@@ -21,16 +21,15 @@ type
 
   TJSONValue = class(TObject)
   private
-    _t: TJSONValueType;
     _v: record
-      case _valueType: TJSONValueType of
-        jtString:  (s: PWideChar);
+      case t: TJSONValueType of
         jtBoolean: (b: Boolean);
         jtInt:     (i: Int64);
         jtDouble:  (d: Double);
         jtObject:  (o: TJSONObject);
         jtArray:   (a: TJSONArray);
     end;
+    _s: string;
     constructor Create(var P: PWideChar); overload;
     procedure FreeValue;
     procedure ParseNull(var P: PWideChar);
@@ -101,7 +100,12 @@ type
   TJSONObject = class(TObject)
   private
     _Values: TList;
+    {$IFDEF FAST_KEY_ACCESS}
     _Keys: TArgoTree;
+    {$ENDIF}
+    {$IFNDEF FAST_KEY_ACCESS}
+    _Keys: TFastStringList;
+    {$ENDIF}
     constructor Create(var P: PWideChar) overload;
     procedure ParsePair(var P: PWideChar);
     procedure AddPair(key: string; value: TJSONValue);
@@ -145,26 +149,6 @@ type
 
 
 implementation
-
-{ === HELPERS === }
-
-function StringSize(str: string): Integer;
-begin
-  Result := ByteLength(str);
-  if Result > 0 then
-    Inc(Result, 2 * (SizeOf(word) + SizeOf(Longint)) + SizeOf(Char));
-end;
-
-function AllocString(str: string): PWideChar;
-var
-  size: Integer;
-begin
-  Result := PWideChar('');
-  size := StringSize(str);
-  if size = 0 then exit;
-  GetMem(Result, size);
-  StrLCopy(Result, PWideChar(str), size);
-end;
 
 { === DESERIALIZATION === }
 
@@ -242,14 +226,16 @@ begin
   Result := '\u' + IntToHex(Ord(c), 4);
 end;
 
-function Escape(s: PWideChar): String;
+function Escape(s: String): String;
 var
+  P: PWideChar;
   c: WideChar;
 begin
+  P := PWideChar(s);
   Result := '';
   while true do begin
-    c := s^;
-    Inc(s);
+    c := P^;
+    Inc(P);
     if c = #0 then
       break
     else if CharInSet(c, [#1..#31, '"', '\', #127]) then
@@ -350,7 +336,12 @@ var
   c: WideChar;
 begin
   _Values := TList.Create;
+  {$IFDEF FAST_KEY_ACCESS}
   _Keys := TArgoTree.Create;
+  {$ENDIF}
+  {$IFNDEF FAST_KEY_ACCESS}
+  _Keys := TFastStringList.Create;
+  {$ENDIF}
   LastToken := False;
   if P^ <> '{' then
     raise JSONException.Create(jxStartBracket, P + 8);
@@ -449,7 +440,7 @@ end;
 
 procedure TJSONValue.ParseNull(var P: PWideChar);
 begin
-  _t := jtNull;
+  _v.t := jtNull;
   if StrLIComp(P, 'null', 4) = 0 then
     Inc(P, 4)
   else
@@ -458,13 +449,13 @@ end;
 
 procedure TJSONValue.ParseString(var P: PWidechar);
 begin
-  _t := jtString;
-  _v.s := AllocString(ParseJSONString(P));
+  _v.t := jtString;
+  _s := ParseJSONString(P);
 end;
 
 procedure TJSONValue.ParseBoolean(var P: PWidechar);
 begin
-  _t := jtBoolean;
+  _v.t := jtBoolean;
   if StrLIComp(P, 'true', 4) = 0 then begin
     _v.b := true;
     Inc(P, 4);
@@ -482,14 +473,14 @@ var
   str: String;
   c: WideChar;
 begin
-  _t := jtInt;
+  _v.t := jtInt;
   str := '';
   while true do begin
     c := P^;
     case c of
       #10, #13, ' ', ',','}',']': break;
       '.','e','E': begin
-        _t := jtDouble;
+        _v.t := jtDouble;
         str := str + c;
       end;
       else begin
@@ -501,7 +492,7 @@ begin
     end;
     Inc(P);
   end;
-  if _t = jtDouble then
+  if _v.t = jtDouble then
     _v.d := StrToFloat(str)
   else
     _v.i := StrToInt64(str);
@@ -509,74 +500,74 @@ end;
 
 procedure TJSONValue.ParseArray(var P: PWidechar);
 begin
-  _t := jtArray;
+  _v.t := jtArray;
   _v.a := TJSONArray.Create(P);
 end;
 
 procedure TJSONValue.ParseObject(var P: PWidechar);
 begin
-  _t := jtObject;
+  _v.t := jtObject;
   _v.o := TJSONObject.Create(P);
 end;
 
 procedure TJSONValue.Nullify;
 begin
   FreeValue;
-  _t := jtNull;
+  _v.t := jtNull;
 end;
 
 procedure TJSONValue.Put(value: String);
 begin
   FreeValue;
-  _t := jtString;
-  _v.s := AllocString(value);
+  _v.t := jtString;
+  _s := value;
 end;
 
 procedure TJSONValue.Put(value: Boolean);
 begin
   FreeValue;
-  _t := jtBoolean;
+  _v.t := jtBoolean;
   _v.b := value;
 end;
 
 procedure TJSONValue.Put(value: Int64);
 begin
   FreeValue;
-  _t := jtInt;
+  _v.t := jtInt;
   _v.i := value;
 end;
 
 procedure TJSONValue.Put(value: Double);
 begin
   FreeValue;
-  _t := jtDouble;
+  _v.t := jtDouble;
   _v.d := value;
 end;
 
 procedure TJSONValue.Put(value: TJSONArray);
 begin
   FreeValue;
-  _t := jtArray;
+  _v.t := jtArray;
   _v.a := value;
 end;
 
 procedure TJSONValue.Put(value: TJSONObject);
 begin
   FreeValue;
-  _t := jtObject;
+  _v.t := jtObject;
   _v.o := value;
 end;
 
 function TJSONValue.IsNull: Boolean;
 begin
-  Result := _t = jtNull;
+  Result := _v.t = jtNull;
 end;
 
 function TJSONValue.ToString: String;
 begin
-  case _t of
+  case _v.t of
     jtNull: Result := 'null';
-    jtString: Result := '"' + Escape(_v.s) + '"';
+    jtString: Result := '"' + Escape(_s) + '"';
     jtBoolean: Result := BoolToStr(_v.b, true);
     jtInt: Result := IntToStr(_v.i);
     jtDouble: Result := FloatToStr(_v.d);
@@ -587,7 +578,7 @@ end;
 
 function TJSONValue.GetJSONValueType: TJSONValueType;
 begin
-  Result := _t;
+  Result := _v.t;
 end;
 
 { === GENERAL === }
@@ -595,7 +586,7 @@ end;
 { TJSONValue }
 constructor TJSONValue.Create;
 begin
-  _t := jtNull;
+  _v.t := jtNull;
 end;
 
 destructor TJSONValue.Destroy;
@@ -606,8 +597,7 @@ end;
 
 procedure TJSONValue.FreeValue;
 begin
-  case _t of
-    jtString: FreeMem(_v.s, Length(string(_v.s)));
+  case _v.t of
     jtArray: _v.a.Free;
     jtObject: _v.o.Free;
   end;
@@ -652,8 +642,8 @@ var
 begin
   Result := '';
   value := GetValue(index);
-  if Assigned(value) and (value._t = jtString) then
-    Result := value._v.s;
+  if Assigned(value) and (value._v.t = jtString) then
+    Result := value._s;
 end;
 
 function TJSONArray.GetB(index: Integer): Boolean;
@@ -662,7 +652,7 @@ var
 begin
   Result := false;
   value := GetValue(index);
-  if Assigned(value) and (value._t = jtBoolean) then
+  if Assigned(value) and (value._v.t = jtBoolean) then
     Result := value._v.b;
 end;
 
@@ -672,7 +662,7 @@ var
 begin
   Result := 0;
   value := GetValue(index);
-  if Assigned(value) and (value._t = jtInt) then
+  if Assigned(value) and (value._v.t = jtInt) then
     Result := value._v.i;
 end;
 
@@ -682,7 +672,7 @@ var
 begin
   Result := 0.0;
   value := GetValue(index);
-  if Assigned(value) and (value._t = jtDouble) then
+  if Assigned(value) and (value._v.t = jtDouble) then
     Result := value._v.d;
 end;
 
@@ -692,7 +682,7 @@ var
 begin
   Result := nil;
   value := GetValue(index);
-  if Assigned(value) and (value._t = jtArray) then
+  if Assigned(value) and (value._v.t = jtArray) then
     Result := value._v.a;
 end;
 
@@ -702,7 +692,7 @@ var
 begin
   Result := nil;
   value := GetValue(index);
-  if Assigned(value) and (value._t = jtObject) then
+  if Assigned(value) and (value._v.t = jtObject) then
     Result := value._v.o;
 end;
 
@@ -801,7 +791,12 @@ end;
 constructor TJSONObject.Create;
 begin
   _Values := TList.Create;
+  {$IFDEF FAST_KEY_ACCESS}
   _Keys := TArgoTree.Create;
+  {$ENDIF}
+  {$IFNDEF FAST_KEY_ACCESS}
+  _Keys := TFastStringList.Create;
+  {$ENDIF}
 end;
 
 destructor TJSONObject.Destroy;
@@ -825,7 +820,7 @@ var
   i: Integer;
 begin
   Result := nil;
-  i := _Keys[key];
+  i := _Keys.IndexOf(key);
   if i > -1 then
     Result := TJSONValue(_Values[i]);
 end;
@@ -839,7 +834,7 @@ procedure TJSONObject.SetValue(key: String; value: TJSONValue);
 var
   i: Integer;
 begin
-  i := _Keys[key];
+  i := _Keys.IndexOf(key);
   if not Assigned(value) then
     value := TJSONValue.Create;
   if i > -1 then
@@ -859,8 +854,8 @@ var
 begin
   Result := '';
   value := GetValue(key);
-  if Assigned(value) and (value._t = jtString) then
-    Result := WideString(value._v.s);
+  if Assigned(value) and (value._v.t = jtString) then
+    Result := WideString(value._s);
 end;
 
 function TJSONObject.GetB(key: string): boolean;
@@ -869,7 +864,7 @@ var
 begin
   Result := false;
   value := GetValue(key);
-  if Assigned(value) and (value._t = jtBoolean) then
+  if Assigned(value) and (value._v.t = jtBoolean) then
     Result := value._v.b;
 end;
 
@@ -879,7 +874,7 @@ var
 begin
   Result := 0;
   value := GetValue(key);
-  if Assigned(value) and (value._t = jtInt) then
+  if Assigned(value) and (value._v.t = jtInt) then
     Result := value._v.i;
 end;
 
@@ -889,7 +884,7 @@ var
 begin
   Result := 0.0;
   value := GetValue(key);
-  if Assigned(value) and (value._t = jtDouble) then
+  if Assigned(value) and (value._v.t = jtDouble) then
     Result := value._v.d;
 end;
 
@@ -899,7 +894,7 @@ var
 begin
   Result := nil;
   value := GetValue(key);
-  if Assigned(value) and (value._t = jtArray) then
+  if Assigned(value) and (value._v.t = jtArray) then
     Result := value._v.a;
 end;
 
@@ -909,7 +904,7 @@ var
 begin
   Result := nil;
   value := GetValue(key);
-  if Assigned(value) and (value._t = jtObject) then
+  if Assigned(value) and (value._v.t = jtObject) then
     Result := value._v.o;
 end;
 
@@ -930,7 +925,7 @@ end;
 
 function TJSONObject.GetCount: Integer;
 begin
-  Result := _Keys.Size;
+  Result := _Keys.Count;
 end;
 
 procedure TJSONObject.SetS(key: string; value: string);
@@ -965,14 +960,20 @@ end;
 
 function TJSONObject.HasKey(key: string): Boolean;
 begin
-  Result := _Keys[key] > -1;
+  Result := _Keys.IndexOf(key) > -1;
 end;
 
 procedure TJSONObject.Delete(key: string);
 var
   i: Integer;
 begin
+  {$IFDEF FAST_KEY_ACCESS}
   i := _Keys.Delete(key);
+  {$ENDIF}
+  {$IFNDEF FAST_KEY_ACCESS}
+  i := _Keys.IndexOf(key);
+  _Keys.Delete(i);
+  {$ENDIF}
   if i > -1 then
     _Values.Delete(i);
 end;
@@ -982,10 +983,10 @@ var
   i: Integer;
 begin
   Result := '{';
-  for i := 0 to Pred(_Keys.Size) do
+  for i := 0 to Pred(_Keys.Count) do
     Result := Result + '"' + Escape(PWideChar(_Keys.Names[i])) + '":' +
       TJSONValue(_Values[i]).ToString + ',';
-  if _Keys.Size > 0 then
+  if _Keys.Count > 0 then
     SetLength(Result, Length(Result) - 1);
   Result := Result + '}';
 end;
