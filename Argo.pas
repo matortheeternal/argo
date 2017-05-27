@@ -2,7 +2,7 @@ unit Argo;
 
 interface
 
-{$DEFINE FAST_KEY_ACCESS}
+{//$DEFINE FAST_KEY_ACCESS}
 
 uses
   SysUtils, Classes, Variants,
