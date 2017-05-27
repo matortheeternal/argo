@@ -812,7 +812,7 @@ end;
 
 function TJSONObject.GetKey(index: Integer): String;
 begin
-  Result := _Keys.Names[index];
+  Result := _Keys.Strings[index];
 end;
 
 function TJSONObject.GetValue(key: String): TJSONValue;
