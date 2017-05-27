@@ -2,8 +2,6 @@ unit Argo;
 
 interface
 
-{//$DEFINE FAST_KEY_ACCESS}
-
 uses
   SysUtils, Classes, Variants,
   ArgoTypes;
@@ -986,7 +984,7 @@ var
 begin
   Result := '{';
   for i := 0 to Pred(_Keys.Count) do
-    Result := Result + '"' + Escape(PWideChar(_Keys.Names[i])) + '":' +
+    Result := Result + '"' + Escape(_Keys.Strings[i]) + '":' +
       TJSONValue(_Values[i]).ToString + ',';
   if _Keys.Count > 0 then
     SetLength(Result, Length(Result) - 1);

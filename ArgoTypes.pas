@@ -22,7 +22,6 @@ type
   TArgoTree = class(TObject)
   private
     Root: PArgoTreeNode;
-    procedure Balance;
     function GetSize(node: PArgoTreeNode): Integer;
     function GetDepth(node: PArgoTreeNode): Integer;
     procedure DecrementNodes(node: PArgoTreeNode; value: Integer);
@@ -41,7 +40,7 @@ type
     function IndexOf(name: String): Integer;
     procedure Add(name: String);
     property Values[index: string]: Integer read IndexOf; default;
-    property Names[index: Integer]: String read GetName;
+    property Strings[index: Integer]: String read GetName;
   end;
 
 implementation
@@ -147,18 +146,6 @@ begin
   if not Assigned(node) then
     exit;
   Result := 1 + Max(GetDepth(node.Left), GetDepth(node.Right));
-end;
-
-procedure TArgoTree.Balance;
-var
-  leftSize, rightSize: Integer;
-begin
-  // exit if no tree to balance
-  if not Assigned(Root) then
-    exit;
-  leftSize := GetSize(Root.Left);
-  rightSize := GetSize(Root.Right);
-  // TODO
 end;
 
 function TArgoTree.GetNode(name: string): PArgoTreeNode;
