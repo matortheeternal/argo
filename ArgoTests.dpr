@@ -14,8 +14,8 @@ var
 begin
   if input = '' then
     input := '\' + testChar;
-  obj := TJSONObject.Create('{"test":"' + input + '"}');
-  ExpectEqual(obj.S['test'], testChar);
+  obj := TJSONObject.Create('{"' + input + '":"' + input + '"}');
+  ExpectEqual(obj.S[testChar], testChar);
 end;
 
 procedure BuildMahoganyTests;
@@ -707,43 +707,35 @@ begin
 
   Describe('String unescaping', procedure
     begin
-      Describe('String values', procedure
+      It('Should unescape special characters', procedure
         begin
-          It('Should unescape special characters', procedure
-            begin
-              TestUnescape(#34);        // double quote
-              TestUnescape(#39);        // single quote
-              TestUnescape(#47);        // forward slash
-              TestUnescape(#92);        // backwards slash
-              TestUnescape(#8, '\b');   // backspace
-              TestUnescape(#9, '\t');   // tab
-              TestUnescape(#10, '\n');  // line feed
-              TestUnescape(#12, '\f');  // form feed
-              TestUnescape(#13, '\r');  // carriage return
-            end);
-
-          It('Should unescape hexadecimal escape sequences', procedure
-            var
-              i: Integer;
-            begin
-              TestUnescape(#126, '\x7E'); // tilde
-              TestUnescape(#127, '\x7F'); // delete
-              for i := 128 to 255 do
-                TestUnescape(chr(i), '\x' + IntToHex(i, 2)); // 0x80-0xFF
-            end);
-
-          It('Should unescape unicode escape sequences', procedure
-            var
-              i: Integer;
-            begin
-              for i := 256 to 65535 do
-                TestUnescape(chr(i), '\u' + IntToHex(i, 4)); // 0x0100-0xFFFF
-            end);
+          TestUnescape(#34);        // double quote
+          TestUnescape(#39);        // single quote
+          TestUnescape(#47);        // forward slash
+          TestUnescape(#92);        // backwards slash
+          TestUnescape(#8, '\b');   // backspace
+          TestUnescape(#9, '\t');   // tab
+          TestUnescape(#10, '\n');  // line feed
+          TestUnescape(#12, '\f');  // form feed
+          TestUnescape(#13, '\r');  // carriage return
         end);
 
-      Describe('Object keys', procedure
+      It('Should unescape hexadecimal escape sequences', procedure
+        var
+          i: Integer;
         begin
-          // TODO
+          TestUnescape(#126, '\x7E'); // tilde
+          TestUnescape(#127, '\x7F'); // delete
+          for i := 128 to 255 do
+            TestUnescape(chr(i), '\x' + IntToHex(i, 2)); // 0x80-0xFF
+        end);
+
+      It('Should unescape unicode escape sequences', procedure
+        var
+          i: Integer;
+        begin
+          for i := 256 to 65535 do
+            TestUnescape(chr(i), '\u' + IntToHex(i, 4)); // 0x0100-0xFFFF
         end);
     end);
 
