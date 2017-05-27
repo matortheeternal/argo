@@ -171,6 +171,96 @@ end;
 var
   LastToken: Boolean;
 
+function HexDigit(c: WideChar): Byte;
+begin
+  if c <= '9' then  // parse 0-9
+    Result := Byte(c) - Byte('0')
+  else              // parse A-F, a-f
+    Result := (Byte(c) and 7) + 9;
+end;
+
+function ParseUnicode(var P: PWideChar): WideChar;
+var
+  n: Integer;
+  i: Integer;
+begin
+  n := 0;
+  for i := 0 to 3 do begin
+    Inc(P);
+    Inc(n, Word(HexDigit(P^)) shl (4 * (3 - i)));
+  end;
+  Result := WideChar(n);
+end;
+
+function ParseHex(var P: PWideChar): WideChar;
+var
+  n: Integer;
+  i: Integer;
+begin
+  n := 0;
+  for i := 0 to 1 do begin
+    Inc(P);
+    Inc(n, Word(HexDigit(P^)) shl (4 * (1 - i)));
+  end;
+  Result := WideChar(n);
+end;
+
+function Unescape(c: WideChar; var P: PWideChar): string;
+begin
+  case c of
+    #39,                            // single quote
+    '/': Result := c;               // forward slash
+    'b': Result := #8;              // backspace
+    't': Result := #9;              // tab
+    'n': Result := #10;             // line feed
+    'f': Result := #12;             // form feed
+    'r': Result := #13;             // carriage return
+    'u': Result := ParseUnicode(P); // unicode escape sequence
+    'x': Result := ParseHex(P);     // hexadecimal escape sequence
+    else
+      raise JSONException.Create(jxUnexpectedChar, P);
+  end;
+end;
+
+function AsciiEscape(var c: WideChar): string;
+begin
+  case c of
+    '"': Result := '\"';
+    '\': Result := '\\';
+    #8:  Result := '\b';
+    #9:  Result := '\t';
+    #10: Result := '\n';
+    #12: Result := '\f';
+    #13: Result := '\r';
+    else
+      Result := 'x' + IntToHex(Ord(c), 2);
+  end;
+end;
+
+function UnicodeEscape(var c: WideChar): string;
+begin
+  Result := 'u' + IntToHex(Ord(c), 4);
+end;
+
+function Escape(s: PWideChar): String;
+var
+  c: WideChar;
+begin
+  Result := '';
+  while true do begin
+    c := s^;
+    Inc(s);
+    if c = #0 then
+      break
+    else if CharInSet(c, [#1..#31, '"', '\', #127]) then
+      Result := Result + AsciiEscape(c)
+    else if c > #255 then
+      Result := Result + UnicodeEscape(c)
+    else
+      Result := Result + c;
+  end;
+end;
+
 // function should be entered on the opening double quote for a JSON string.
 function ParseJSONString(var P: PWideChar): String;
 var
@@ -183,19 +273,27 @@ begin
     Inc(P);
     c := P^;
     case c of
-      '\': // backslash
+      '\': begin // backslash
         escaped := not escaped;
+        if not escaped then
+          Result := Result + '\';
+      end;
       '"': // quote
         if not escaped then
           break
-        else
+        else begin
           escaped := false;
+          Result := Result + '"';
+        end;
       #0:
         raise JSONException.Create(jxTerminated, P);
       else begin
-        if escaped then escaped := false;
-        if ord(c) < 32 then
+        if (c < #32) or (c = #127) then
           raise JSONException.Create(jxUnexpectedChar, P)
+        else if escaped then begin
+          escaped := false;
+          Result := Result + Unescape(c, P);
+        end
         else
           Result := Result + c;
       end;
@@ -478,7 +576,7 @@ function TJSONValue.ToString: String;
 begin
   case _t of
     jtNull: Result := 'null';
-    jtString: Result := '"' + _v.s + '"';
+    jtString: Result := '"' + Escape(_v.s) + '"';
     jtBoolean: Result := BoolToStr(_v.b, true);
     jtInt: Result := IntToStr(_v.i);
     jtDouble: Result := FloatToStr(_v.d);
