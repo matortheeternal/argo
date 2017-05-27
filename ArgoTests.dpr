@@ -15,7 +15,26 @@ begin
   if input = '' then
     input := '\' + testChar;
   obj := TJSONObject.Create('{"' + input + '":"' + input + '"}');
-  ExpectEqual(obj.S[testChar], testChar);
+  try
+    ExpectEqual(obj.S[testChar], testChar);
+  finally
+    obj.Free;
+  end;
+end;
+
+procedure TestEscape(testChar: WideChar; output: string = '');
+var
+  obj: TJSONObject;
+begin
+  if output = '' then
+    output := '\' + testChar;
+  obj := TJSONObject.Create;
+  try
+    obj.S[testChar] := testChar;
+    ExpectEqual(obj.ToString, '{"' + output + '":"' + output + '"}');
+  finally
+    obj.Free;
+  end;
 end;
 
 procedure BuildMahoganyTests;
@@ -705,6 +724,38 @@ begin
         end);
     end);
 
+  Describe('String escaping', procedure
+    begin
+      It('Should escape special characters', procedure
+        begin
+          TestEscape(#34);        // double quote
+          TestEscape(#92);        // backwards slash
+          TestEscape(#8, '\b');   // backspace
+          TestEscape(#9, '\t');   // tab
+          TestEscape(#10, '\n');  // line feed
+          TestEscape(#12, '\f');  // form feed
+          TestEscape(#13, '\r');  // carriage return
+        end);
+
+      It('Should escape hexadecimal escape sequences', procedure
+        var
+          i: Integer;
+        begin
+          for i := 1 to 31 do
+            if not i in [8,9,10,12,13] then
+              TestEscape(chr(i), '\x' + IntToHex(i, 2)); // x01-x1F
+          TestEscape(#127, '\x7F'); // delete
+        end);
+
+      It('Should escape unicode escape sequences', procedure
+        var
+          i: Integer;
+        begin
+          for i := 256 to 65535 do
+            TestEscape(chr(i), '\u' + IntToHex(i, 4)); // u0100-uFFFF
+        end);
+    end);
+
   Describe('String unescaping', procedure
     begin
       It('Should unescape special characters', procedure
@@ -727,7 +778,7 @@ begin
           TestUnescape(#126, '\x7E'); // tilde
           TestUnescape(#127, '\x7F'); // delete
           for i := 128 to 255 do
-            TestUnescape(chr(i), '\x' + IntToHex(i, 2)); // 0x80-0xFF
+            TestUnescape(chr(i), '\x' + IntToHex(i, 2)); // x80-xFF
         end);
 
       It('Should unescape unicode escape sequences', procedure
@@ -735,7 +786,7 @@ begin
           i: Integer;
         begin
           for i := 256 to 65535 do
-            TestUnescape(chr(i), '\u' + IntToHex(i, 4)); // 0x0100-0xFFFF
+            TestUnescape(chr(i), '\u' + IntToHex(i, 4)); // u0100-uFFFF
         end);
     end);
 
