@@ -33,12 +33,12 @@ type
     function GetNode(name: String): PArgoTreeNode;
     function GetNodeByValue(node: PArgoTreeNode; var value: Integer): PArgoTreeNode;
     procedure GetNodeContext(name: String; var cur, parent: PArgoTreeNode; var diff: Integer);
-    function IndexOf(name: String): Integer;
     function GetName(index: Integer): String;
   public
     Count: Integer;
     constructor Create;
     function Delete(name: String): Integer;
+    function IndexOf(name: String): Integer;
     procedure Add(name: String);
     property Values[index: string]: Integer read IndexOf; default;
     property Names[index: Integer]: String read GetName;
@@ -204,16 +204,6 @@ begin
   Inc(Count);
 end;
 
-function TArgoTree.IndexOf(name: string): Integer;
-var
-  node: PArgoTreeNode;
-begin
-  Result := -1;
-  node := GetNode(name);
-  if Assigned(node) then
-    Result := node.Value;
-end;
-
 function TArgoTree.GetName(index: Integer): String;
 begin
   if (index < 0) or (index >= Count) then
@@ -233,6 +223,16 @@ begin
     else
       break;
   end;
+end;
+
+function TArgoTree.IndexOf(name: string): Integer;
+var
+  node: PArgoTreeNode;
+begin
+  Result := -1;
+  node := GetNode(name);
+  if Assigned(node) then
+    Result := node.Value;
 end;
 
 procedure TArgoTree.Add(name: string);
