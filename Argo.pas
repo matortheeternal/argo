@@ -233,13 +233,13 @@ begin
     #12: Result := '\f';
     #13: Result := '\r';
     else
-      Result := 'x' + IntToHex(Ord(c), 2);
+      Result := '\x' + IntToHex(Ord(c), 2);
   end;
 end;
 
 function UnicodeEscape(var c: WideChar): string;
 begin
-  Result := 'u' + IntToHex(Ord(c), 4);
+  Result := '\u' + IntToHex(Ord(c), 4);
 end;
 
 function Escape(s: PWideChar): String;
@@ -983,7 +983,8 @@ var
 begin
   Result := '{';
   for i := 0 to Pred(_Keys.Size) do
-    Result := Result + '"' + _Keys.Names[i] + '":' + TJSONValue(_Values[i]).ToString + ',';
+    Result := Result + '"' + Escape(PWideChar(_Keys.Names[i])) + '":' +
+      TJSONValue(_Values[i]).ToString + ',';
   if _Keys.Size > 0 then
     SetLength(Result, Length(Result) - 1);
   Result := Result + '}';
