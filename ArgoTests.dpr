@@ -60,7 +60,7 @@ begin
           tree.Add('values');
           tree.Add('to');
           tree.Add('tree');
-          ExpectEqual(tree.Size, 5);
+          ExpectEqual(tree.Count, 5);
         end);
 
       It('Should be able to get values', procedure
@@ -75,7 +75,7 @@ begin
       It('Should be able to delete values', procedure
         begin
           tree.Delete('adding');
-          ExpectEqual(tree.Size, 4);
+          ExpectEqual(tree.Count, 4);
         end);
 
       It('Should decrement larger values when value is deleted', procedure
@@ -670,7 +670,7 @@ begin
               ExpectException(procedure
                 begin
                   obj.Keys[7]
-                end, 'Tree index out of bounds (7)');
+                end, 'List index out of bounds (7)');
             end);
         end);
 
