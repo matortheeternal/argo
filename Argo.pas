@@ -315,10 +315,12 @@ const
     'Expected comma separating object/array members near <%s>.'
   );
 var
-  context: PWideChar;
+  context: WideString;
+  pwBuffer: PWideChar;
 begin
-  GetMem(context, 34);
-  StrLCopy(context, pos - 8, 17);
+  SetLength(context, 18);
+  pwBuffer := PWideChar(context);
+  StrLCopy(pwBuffer, pos - 8, 17);
   self.Message := Format(JSONExceptionMessages[Ord(exceptionType)], [context]);
 end;
 
@@ -974,8 +976,10 @@ begin
   i := _Keys.IndexOf(key);
   _Keys.Delete(i);
   {$ENDIF}
-  if i > -1 then
+  if i > -1 then begin
+    TJSONValue(_Values[i]).Free;
     _Values.Delete(i);
+  end;
 end;
 
 function TJSONObject.ToString: String;
