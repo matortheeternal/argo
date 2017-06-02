@@ -326,7 +326,7 @@ begin
 
           It('Should serialize boolean values correctly', procedure
             begin
-              Expect(Pos('False', json) > 0, 'Should contain False');
+              Expect(Pos('false', json) > 0, 'Should contain false');
             end);
 
           It('Should serialize integer values correctly', procedure
@@ -613,7 +613,7 @@ begin
 
           It('Should serialize boolean values correctly', procedure
             begin
-              Expect(Pos('"boolean":False', json) > 0, 'Should contain "boolean":False');
+              Expect(Pos('"boolean":false', json) > 0, 'Should contain "boolean":false');
             end);
 
           It('Should serialize integer values correctly', procedure
