@@ -743,8 +743,8 @@ begin
         begin
           for i := 1 to 31 do
             if not i in [8,9,10,12,13] then
-              TestEscape(chr(i), '\x' + IntToHex(i, 2)); // x01-x1F
-          TestEscape(#127, '\x7F'); // delete
+              TestEscape(chr(i), '\u' + IntToHex(i, 4)); // x01-x1F
+          TestEscape(#127, '\u007F'); // delete
         end);
 
       It('Should escape unicode escape sequences', procedure
@@ -775,10 +775,10 @@ begin
         var
           i: Integer;
         begin
-          TestUnescape(#126, '\x7E'); // tilde
-          TestUnescape(#127, '\x7F'); // delete
+          TestUnescape(#126, '\u007E'); // tilde
+          TestUnescape(#127, '\u007F'); // delete
           for i := 128 to 255 do
-            TestUnescape(chr(i), '\x' + IntToHex(i, 2)); // x80-xFF
+            TestUnescape(chr(i), '\u' + IntToHex(i, 4)); // x80-xFF
         end);
 
       It('Should unescape unicode escape sequences', procedure
